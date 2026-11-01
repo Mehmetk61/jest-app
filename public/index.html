@@ -1210,3 +1210,6 @@ chips($('reasons'),REASONS,'reason');initDate();gl();areas();tick();setInterval(
 $('splash').onclick=()=>{$('splash').style.display='none'};venues();check();go(0);
 if(loadSess()){$('hello').textContent='Merhaba, '+dname();renderHome();go(7)}
 </script>
+
+<script src="/api.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(function(){})</script>

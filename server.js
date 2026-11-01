@@ -85,7 +85,9 @@ async function sendSms(phone, text) {            // Gerçek sağlayıcı seçili
   if (process.env.JEST_SMS_URL) await fetch(process.env.JEST_SMS_URL, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (process.env.JEST_SMS_KEY || '') }, body: JSON.stringify({ to: phone, text }) });
   else console.log('[SMS]', phone, text);
 }
+const YAS_BEYAN = process.env.JEST_YAS_BEYAN === '1';   // Kapalı pilotta kurucunun tanıdığı yetişkinler için beyan; hukuki görüşe tabidir
 async function ageVerified(token) {              // Gerçek: e-Devlet yaş belirteci doğrulaması (Başkanlık rehberi çıkınca)
+  if (YAS_BEYAN && token === 'BEYAN') return true;
   if (DEV) return token === 'DEV-AGE-OK';
   return false;
 }
@@ -109,6 +111,7 @@ R('POST', '/api/verify', async ({ body }) => {
   db.prepare('INSERT INTO sessions(token,user_id,created) VALUES(?,?,?)').run(token, u.id, now());
   return { token, user: pubUser(u) };
 });
+R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN }));
 R('GET', '/api/me', ({ req }) => ({ user: pubUser(auth(req)) }));
 R('POST', '/api/logout', ({ req }) => { auth(req); db.prepare('DELETE FROM sessions WHERE token=?').run(req.headers.authorization.replace('Bearer ', '')); return { ok: true }; });
 
