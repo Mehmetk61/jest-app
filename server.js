@@ -230,8 +230,9 @@ const server = http.createServer(async (req, res) => {
     }
     let f = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : url.pathname);
     if (!f.startsWith(path.join(__dirname, 'public')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) f = path.join(__dirname, 'public', 'index.html');
+    if (!fs.existsSync(f)) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('JEST sunucusu çalışıyor. (Ekran dosyaları henüz yüklenmedi.)'); }
     res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream', 'x-content-type-options': 'nosniff' });
-    fs.createReadStream(f).pipe(res);
+    const st = fs.createReadStream(f); st.on('error', () => { if (!res.headersSent) res.writeHead(404); res.end('Bulunamadı'); }); st.pipe(res);
   } catch (e) { ok(res, { error: e.message }, e.code || 500); if (!e.code) console.error(e); }
 });
 if (require.main === module) server.listen(PORT, () => console.log(`JEST http://localhost:${PORT}${DEV ? '  (GELİŞTİRME)' : ''}`));
