@@ -18,7 +18,7 @@ function addInviteRow(){
   $('phoneRow').parentNode.insertBefore(d,$('phoneRow'));
 }
 var oldUI=window.authUI;
-window.authUI=function(){oldUI();addInviteRow();var r=$('invRow');if(r)r.hidden=authMode!=='up'};
+window.authUI=function(){oldUI();addInviteRow();var r=$('invRow');if(r)r.hidden=authMode!=='up';if($('inv'))$('inv').readOnly=false};
 
 window.sendCode=function(){
   var rb=$('otpResend');rb.disabled=true;
@@ -49,7 +49,7 @@ window.authSubmit=function(e){
   if(up){body.name=$('fn').value.trim().replace(/\s+/g,' ');body.terms=true;body.ageToken=ageToken();body.inviteCode=$('inv')?$('inv').value.trim():''}
   $('authGo').disabled=true;
   api('POST','/api/verify',body).then(function(j){
-    setTok(j.token);S.user=j.user.username;S.name=j.user.name;saveSess();clearInterval(otpTimer);
+    setTok(j.token);window.JEST_ME=j.user;S.user=j.user.username;S.name=j.user.name;saveSess();clearInterval(otpTimer);
     $('hello').textContent='Merhaba, '+dname();otpReset();renderHome();go(7);
   }).catch(function(er){
     var msg=er.message;
@@ -69,7 +69,7 @@ api('GET','/api/config').then(function(c){
   CFG=c;
   $('ageOk').textContent=c.dev?'e-Devlet\'ten belirteç al (deneme: 18+)':'18 yaşından büyük olduğumu beyan ederim';
   window.authUI();
-  if(tok()){api('GET','/api/me').then(function(j){S.user=j.user.username;S.name=j.user.name;saveSess();$('hello').textContent='Merhaba, '+dname();renderHome();go(7)}).catch(function(){setTok('');try{localStorage.removeItem('jest-demo-oturum')}catch(e){}window.authUI();go(0)})}
+  if(tok()){api('GET','/api/me').then(function(j){window.JEST_ME=j.user;S.user=j.user.username;S.name=j.user.name;saveSess();$('hello').textContent='Merhaba, '+dname();renderHome();go(7)}).catch(function(){setTok('');try{localStorage.removeItem('jest-demo-oturum')}catch(e){}window.authUI();go(0)})}
   else{try{localStorage.removeItem('jest-demo-oturum')}catch(e){}window.authUI();go(0)}
 }).catch(function(){});
 })();

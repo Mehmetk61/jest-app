@@ -1,0 +1,37 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JEST Mekân</title>
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#FFF6EC;color:#0F1B3D}main{max-width:520px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:14px}h1{margin:0}input,button{font:inherit;padding:14px;border-radius:14px;border:2px solid #E8DCCB;box-sizing:border-box;width:100%}button{background:#FF7A1A;color:#0F1B3D;font-weight:800;border:0;cursor:pointer}button.s{background:#fff;border:2px solid #E8DCCB}#res{border-radius:18px;padding:18px;font-size:22px;font-weight:800;display:none}.ok{background:#2BB673;color:#fff}.wait{background:#FFD66B}.bad{background:#C0392B;color:#fff}video{width:100%;border-radius:16px;display:none;background:#000}.i{padding:8px 0;border-bottom:1px solid #EADFCF}</style></head>
+<body><main>
+<h1>JEST · Mekân</h1>
+<p>Müşterinin telefonundaki QR kodu okut. Hem davet sahibi hem misafir okutunca jest fiyatı geçerli olur.</p>
+<input id="key" type="password" placeholder="Mekân anahtarı" autocomplete="off">
+<button id="save" class="s">Anahtarı kaydet</button>
+<div id="res" role="status"></div>
+<button id="cam">Kamerayı aç ve QR okut</button>
+<video id="v" playsinline muted></video>
+<input id="tok" placeholder="Kamera yoksa QR kodunun metnini yapıştır">
+<button id="go" class="s">Onayla</button>
+<h2>Bugünkü davetler</h2><div id="list">Anahtarı girince görünür.</div>
+</main>
+<script>
+var $=function(i){return document.getElementById(i)},K='jest-mekan-key';
+try{$('key').value=localStorage.getItem(K)||''}catch(e){}
+function H(){return{'content-type':'application/json','x-venue-key':$('key').value.trim()}}
+function show(c,t){var r=$('res');r.className=c;r.textContent=t;r.style.display='block';if(navigator.vibrate)navigator.vibrate(c==='ok'?[80,40,80]:200)}
+function today(){fetch('/api/venue/today',{headers:H()}).then(function(r){return r.json()}).then(function(j){var l=$('list');l.textContent='';if(j.error){l.textContent=j.error;return}
+  if(!j.invites.length){l.textContent='Bugün için davet yok.';return}
+  j.invites.forEach(function(i){var d=document.createElement('div');d.className='i';var t=new Date(i.at);d.textContent=('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2)+' · davet #'+i.id+' · '+({open:'bekliyor',confirmed:'onaylandı',cancelled:'geri çekildi'}[i.status]||i.status);l.appendChild(d)})})}
+$('save').onclick=function(){try{localStorage.setItem(K,$('key').value.trim())}catch(e){}today()};
+function send(t){fetch('/api/venue/scan',{method:'POST',headers:H(),body:JSON.stringify({token:t})}).then(function(r){return r.json()}).then(function(j){
+  if(j.error)return show('bad',j.error);
+  if(j.confirmed)show('ok','ONAYLANDI. Müşteri '+j.pay+' TL öder (normal '+j.normal+' TL).');
+  else show('wait','Okundu. '+j.waiting+' da okutmalı. O zamana kadar normal fiyat '+j.normal+' TL.');today()}).catch(function(){show('bad','Bağlantı hatası')})}
+$('go').onclick=function(){var t=$('tok').value.trim();if(t){send(t);$('tok').value=''}};
+var stream=null,last='',lt=0;
+$('cam').onclick=function(){
+  if(!('BarcodeDetector' in window))return show('bad','Bu tarayıcı kamerayla okuyamıyor. QR metnini yapıştır.');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){stream=s;var v=$('v');v.srcObject=s;v.style.display='block';v.play();
+    var bd=new BarcodeDetector({formats:['qr_code']});
+    (function loop(){if(!stream)return;bd.detect(v).then(function(c){if(c.length){var t=c[0].rawValue;if(t!==last||Date.now()-lt>5000){last=t;lt=Date.now();send(t)}}}).catch(function(){});setTimeout(loop,400)})()
+  }).catch(function(){show('bad','Kamera izni verilmedi')})};
+if($('key').value)today();
+</script></body></html>
