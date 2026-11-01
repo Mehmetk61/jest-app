@@ -169,6 +169,18 @@ R('POST', '/api/invites/:id/respond', ({ req, p, body }) => {
   }
   return inviteView(i, me);
 });
+R('POST', '/api/invites/:id/edit', ({ req, p, body }) => {
+  const me = auth(req), i = myInvite(+p.id, me);
+  if (i.host_id !== me.id) throw err(403, 'Yalnızca davet sahibi düzenler');
+  if (i.status !== 'open') throw err(400, 'Bu davet düzenlenemez');
+  const at = body.at ? +body.at : i.at, vid = body.venueId ? +body.venueId : i.venue_id;
+  if (at < now() + 600000) throw err(400, 'Zaman geçmişte olamaz');
+  if (!db.prepare('SELECT 1 FROM venues WHERE id=?').get(vid)) throw err(400, 'Mekan seç');
+  db.prepare('UPDATE invites SET at=?, venue_id=? WHERE id=?').run(at, vid, i.id);
+  db.prepare("UPDATE guests SET status='pending', proposal_at=NULL WHERE invite_id=?").run(i.id);   // herkes yeniden yanıtlar
+  db.prepare('DELETE FROM scans WHERE invite_id=?').run(i.id);
+  return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(i.id), me);
+});
 R('POST', '/api/invites/:id/cancel', ({ req, p }) => {
   const me = auth(req), i = myInvite(+p.id, me);
   if (i.host_id !== me.id) throw err(403, 'Yalnızca davet sahibi geri çeker');

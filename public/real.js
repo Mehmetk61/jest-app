@@ -10,6 +10,7 @@ function fmt(ts){var d=new Date(ts);return d.getDate()+' '+MONTHS[d.getMonth()]+
 function tl(n){return n+' TL'}
 function stat(i){
   if(i.status==='cancelled')return 'Geri çekildi';
+  if(i.status==='open'&&i.at<Date.now()-6*3600000)return 'Süresi geçti';
   if(i.status==='confirmed')return 'Tamamlandı';
   var me=window.JEST_ME;
   if(i.role==='host'){
@@ -39,7 +40,13 @@ function draw(){oldRender();
   var cards=document.querySelectorAll('#jlist .jcard');
   cards.forEach(function(c,k){var j=view[k];if(!j)return;c.style.cursor='pointer';c.setAttribute('role','button');c.tabIndex=0;
     c.onclick=function(){openDetail(j.id)};c.onkeydown=function(e){if(e.key==='Enter')openDetail(j.id)}});
-  if(!view.length){var e=document.querySelector('#jlist p.sub');if(e)e.textContent=homeTab==='a'?'Aktif jestin yok. Yeni bir davet gönder.':'Geçmiş jestin yok.'}}
+  var box=$$('jlist'),old=$$('rGuide');if(old)old.remove();
+  var wait=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'}).length;
+  if(wait){var w=el('div','');w.id='rGuide';w.className='card';w.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin-bottom:10px;font-weight:800';w.textContent='Yanıtını bekleyen '+wait+' davetin var.';box.parentNode.insertBefore(w,box)}
+  if(!view.length){var e=document.querySelector('#jlist p.sub');if(e)e.textContent=homeTab==='a'?'Aktif jestin yok.':'Geçmiş jestin yok.';
+    if(!JESTS.length&&homeTab==='a'){var g=el('div','');g.id='rGuide';g.className='card';g.style.cssText='border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px';
+      g.appendChild(el('b','Nasıl çalışır?'));['1. Tanıdığın birini telefon numarasıyla davet et, yeri ve saati seç.','2. O kabul edince ikiniz de mekânda QR kodunuzu gösterin.','3. Mekân onaylayınca jest fiyatı geçerli olur. Ödeme mekânda yapılır, JEST para tutmaz.'].forEach(function(t){g.appendChild(el('span',t))});
+      g.appendChild(el('small','Not: Karşındaki kişinin de JEST üyesi olması gerekir. Henüz üye değilse önce ona JEST\'i anlat.'));box.parentNode.insertBefore(g,box)}}}
 window.renderHome=function(){draw();if(localStorage.getItem('jest-token'))load()};
 setInterval(function(){var s=$$('s7');if(s&&!s.hidden&&!document.querySelector('.rov'))load(true)},15000);
 
@@ -79,6 +86,7 @@ function openNew(){
 
 // ---- ayrıntı ----
 function openDetail(id){
+  if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openDetail(id)});return}
   var O=overlay(),p=O.p;
   function render(i){
     p.innerHTML='';var me=window.JEST_ME||{};
@@ -105,6 +113,8 @@ function openDetail(id){
       }else{
         i.guests.filter(function(g){return g.status==='proposed'}).forEach(function(g){
           p.appendChild(btn(g.name+' için '+fmt(g.proposal_at)+' saatini kabul et',act('accept-proposal',{guestId:g.id}),'btn'))});
+        var ed=el('div','');ed.className='row';p.appendChild(ed);
+        p.appendChild(btn('Saati veya yeri değiştir',function(){editInv(i,O)},'chip'));
         p.appendChild(btn('Daveti geri çek',function(){api('POST','/api/invites/'+i.id+'/cancel').then(function(){close(O.o);load(true)}).catch(function(e){er.textContent=e.message})},'chip'));
       }
       var canQR=i.role==='host'?i.guests.some(function(g){return g.status==='accepted'}):(mine&&mine.status==='accepted');
@@ -116,6 +126,13 @@ function openDetail(id){
   api('GET','/api/invites/'+id).then(function(i){render(i);
     O.o._t.push(setInterval(function(){if(!document.body.contains(O.o))return;api('GET','/api/invites/'+id).then(function(n){if(n.status!==i.status||JSON.stringify(n.guests)!==JSON.stringify(i.guests)){i=n;if(!document.querySelector('.qrov'))render(n);load(true)}}).catch(function(){})},6000))
   }).catch(function(e){p.appendChild(el('p',e.message));p.appendChild(btn('Kapat',function(){close(O.o)},'chip'))});
+}
+function editInv(i,O0){
+  var O=overlay(),p=O.p;p.appendChild(el('h2','Daveti düzenle'));p.appendChild(el('p','Değişiklikten sonra davet edilenlerin yeniden yanıt vermesi gerekir.','sub'));
+  var sel=document.createElement('select');p.appendChild(sel);VEN.forEach(function(v){var o=document.createElement('option');o.value=v.id;o.textContent=v.name+' · '+v.district+' · '+tl(v.normal)+' yerine '+tl(v.jest);if(v.id===i.venue.id)o.selected=true;sel.appendChild(o)});
+  var dt=document.createElement('input');dt.type='datetime-local';dt.value=dtl(i.at);dt.min=dtl(Date.now()+900000);p.appendChild(dt);var er=errBox();p.appendChild(er);
+  p.appendChild(btn('Kaydet',function(){api('POST','/api/invites/'+i.id+'/edit',{at:new Date(dt.value).getTime(),venueId:+sel.value}).then(function(){close(O.o);close(O0.o);load(true).then(function(){openDetail(i.id)})}).catch(function(e){er.textContent=e.message})}));
+  p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'));
 }
 function showQR(i){
   var O=overlay(),p=O.p;O.o.classList.add('qrov');p.appendChild(el('h2','QR kodun'));
@@ -133,7 +150,19 @@ function showQR(i){
     var i=document.createElement('input');i.placeholder='SIL';i.autocapitalize='characters';p.appendChild(i);var er=errBox();p.appendChild(er);
     p.appendChild(btn('Hesabımı kalıcı olarak sil',function(){api('POST','/api/me/delete',{confirm:i.value.trim().toUpperCase()}).then(function(){try{localStorage.removeItem('jest-token');localStorage.removeItem('jest-demo-oturum')}catch(e){}location.reload()}).catch(function(e){er.textContent=e.message})}));
     p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'))}})();
+// uygulamayı ana ekrana ekle
+(function(){var dp=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dp=e;show()});
+  var lo=$$('logout');function standalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone}
+  function show(){if(standalone()||$$('rInst'))return;var b=document.createElement('button');b.id='rInst';b.className='chip';b.type='button';b.textContent='Ana ekrana ekle';b.style.marginLeft='8px';lo.parentNode.appendChild(b);
+    b.onclick=function(){if(dp){dp.prompt();dp.userChoice.finally(function(){dp=null;b.remove()})}else iosHelp()}}
+  function iosHelp(){var O=overlay(),p=O.p;p.appendChild(el('h2','Ana ekrana ekle'));
+    ['iPhone: Safari ile aç, alttaki Paylaş düğmesine (kare ve yukarı ok) bas, Ana Ekrana Ekle seç.','Android: Chrome ile aç, sağ üstteki üç noktaya bas, Uygulamayı yükle ya da Ana ekrana ekle seç.','Eklenince JEST uygulama gibi tam ekran açılır.'].forEach(function(t){p.appendChild(el('p',t))});
+    p.appendChild(btn('Tamam',function(){close(O.o)},'chip'))}
+  if(/iphone|ipad/i.test(navigator.userAgent)&&!standalone())show();
+  setTimeout(function(){if(!dp&&!standalone()&&!$$('rInst')&&lo){show()}},2500);
+})();
 document.querySelectorAll('.demo').forEach(function(d){d.textContent='Kapalı pilot'});
+(function(){var lo=$$('logout');if(!lo)return;var row=lo.parentNode;row.style.flexWrap='wrap';row.style.justifyContent='flex-end';row.style.gap='8px';var n=row.querySelector('.note');if(n)n.remove();[].forEach.call(row.querySelectorAll('button'),function(b){b.style.marginLeft='0'})})();
 $$('newJ').onclick=function(){if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openNew()})}else openNew()};
 $$('toHome').onclick=function(){renderHome();go(7)};
 // oturum sahibini bilmek için

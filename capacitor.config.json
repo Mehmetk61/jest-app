@@ -1,0 +1,8 @@
+{
+  "appId": "app.jest.pilot",
+  "appName": "JEST",
+  "webDir": "public",
+  "server": { "url": "https://jest-app-153s.onrender.com", "cleartext": false },
+  "ios": { "contentInset": "always" },
+  "android": { "allowMixedContent": false }
+}
