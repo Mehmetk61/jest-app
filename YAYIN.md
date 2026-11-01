@@ -32,3 +32,12 @@
 - `JEST_KAPALI=1 JEST_KODLAR=PILOT1,PILOT2 node server.js` → yalnızca davet kodu olan kayıt olabilir. Kayıtlı üyeler kodsuz girer.
 - Kodları kurucu dağıtır, her pilot kullanıcıya bir kod. Arayüzde kayıt ekranına "davet kodu" alanı eklenecek.
 - Mağaza listesine konmaz; adresi bilen web uygulamasını açar. Mekân anahtarları gizli tutulur.
+
+## Pilota geçiş listesi (gerçek kişilerden önce)
+1. Render'da plan: Starter (7 dolar). Settings > Disks > Add Disk: mount path `/var/data`, 1 GB.
+2. Ortam değişkenleri: `JEST_DB=/var/data/jest.db`, `JEST_SECRET` (uzun rastgele), `JEST_ADMIN_KEY` (uzun rastgele), `JEST_KAPALI=1`, `JEST_KODLAR=KOD1,KOD2,...`
+3. `JEST_DEV` değişkenini SİL. Sonra sahte SMS kodu ve sahte yaş belirteci kapanır.
+4. Yaş: e-Devlet belirteci gelene kadar kapalı pilotta `JEST_YAS_BEYAN=1` (kullanıcı 18 yaşından büyük olduğunu beyan eder). Hukuki görüş bekliyor.
+5. SMS: sağlayıcı seçilince `JEST_SMS_URL` ve `JEST_SMS_KEY` girilir; sağlayıcının formatına göre `sendSms` düzenlenir.
+6. Mekân anahtarları: `GET /api/admin/venues` (başlık `x-admin-key`) anahtarları gösterir; `POST /api/admin/venues/ID/rotate` yeniler; `POST /api/admin/venues` yeni mekân ekler. Anahtarı mekâna `…/mekan.html` ile birlikte ver.
+7. Aylık komisyon: `GET /api/admin/commissions?month=2026-11`.

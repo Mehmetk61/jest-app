@@ -126,6 +126,14 @@ function showQR(i){
   p.appendChild(btn('Kapat',function(){close(O.o)},'chip'));
 }
 
+// hesabı sil
+(function(){var lo=$$('logout');if(!lo)return;var b=document.createElement('button');b.className='chip';b.type='button';b.textContent='Hesabımı sil';b.style.marginLeft='8px';lo.parentNode.appendChild(b);
+  b.onclick=function(){var O=overlay(),p=O.p;p.appendChild(el('h2','Hesabını silmek istiyor musun?'));
+    p.appendChild(el('p','Hesabın kapatılır, açık davetlerin geri çekilir ve oturumun sonlanır. Geri alınamaz. Onaylamak için SIL yaz.','sub'));
+    var i=document.createElement('input');i.placeholder='SIL';i.autocapitalize='characters';p.appendChild(i);var er=errBox();p.appendChild(er);
+    p.appendChild(btn('Hesabımı kalıcı olarak sil',function(){api('POST','/api/me/delete',{confirm:i.value.trim().toUpperCase()}).then(function(){try{localStorage.removeItem('jest-token');localStorage.removeItem('jest-demo-oturum')}catch(e){}location.reload()}).catch(function(e){er.textContent=e.message})}));
+    p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'))}})();
+document.querySelectorAll('.demo').forEach(function(d){d.textContent='Kapalı pilot'});
 $$('newJ').onclick=function(){if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openNew()})}else openNew()};
 $$('toHome').onclick=function(){renderHome();go(7)};
 // oturum sahibini bilmek için

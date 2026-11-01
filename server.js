@@ -32,11 +32,12 @@ const now = () => Date.now();
 const hmac = s => crypto.createHmac('sha256', SECRET).update(s).digest('hex').slice(0, 24);
 const normPhone = p => { p = String(p || '').replace(/[^\d+]/g, ''); if (/^0\d{10}$/.test(p)) p = '+9' + p; else if (/^5\d{9}$/.test(p)) p = '+90' + p; else if (/^90\d{10}$/.test(p)) p = '+' + p; return /^\+\d{10,14}$/.test(p) ? p : null; };
 const err = (code, msg) => Object.assign(new Error(msg), { code });
-const ok = (res, o, c = 200) => { res.writeHead(c, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(o)); };
+const ok = (res, o, c = 200) => { res.writeHead(c, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }); res.end(JSON.stringify(o)); };
 
+const SESSION_MS = 30 * 86400000;                          // oturum 30 gün geçerli
 function auth(req) {
   const t = (req.headers.authorization || '').replace(/^Bearer /, '');
-  const u = t && db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?').get(t);
+  const u = t && db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.created>?').get(t, now() - SESSION_MS);
   if (!u) throw err(401, 'Giriş gerekli');
   return u;
 }
@@ -68,6 +69,8 @@ function myInvite(id, me) {
   return i;
 }
 
+const hits = new Map();
+function limited(ip, key, max) { const k = ip + key, t = now(), a = (hits.get(k) || []).filter(x => t - x < 60000); a.push(t); hits.set(k, a); if (hits.size > 5000) hits.clear(); return a.length > max; }
 const routes = [];
 const R = (m, p, f) => routes.push([m, new RegExp('^' + p.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), f]);
 
@@ -211,6 +214,12 @@ R('GET', '/api/invites/:id/receipt', ({ req, p }) => {
 
 // ---- mekân ve yönetim ----
 R('GET', '/api/venue/today', ({ req }) => { const v = venueAuth(req); return { venue: v.name, invites: db.prepare('SELECT id,at,status FROM invites WHERE venue_id=? AND at BETWEEN ? AND ? ORDER BY at').all(v.id, now() - 6 * 3600000, now() + 24 * 3600000) }; });
+const adminOnly = req => { if (req.headers['x-admin-key'] !== ADMIN_KEY) throw err(401, 'Yetkisiz'); };
+R('GET', '/api/admin/venues', ({ req }) => { adminOnly(req); return { venues: db.prepare('SELECT id,name,district,normal,jest,key FROM venues').all() }; });
+R('POST', '/api/admin/venues/:id/rotate', ({ req, p }) => { adminOnly(req); const k = crypto.randomBytes(12).toString('hex'); const r = db.prepare('UPDATE venues SET key=? WHERE id=?').run(k, +p.id); if (!r.changes) throw err(404, 'Mekan yok'); return { id: +p.id, key: k }; });
+R('POST', '/api/admin/venues', ({ req, body }) => { adminOnly(req); const n = String(body.name || '').trim(), d = String(body.district || '').trim(); const nm = +body.normal, js = +body.jest;
+  if (!n || !d || !(nm > 0) || !(js > 0) || js >= nm) throw err(400, 'Ad, semt, normal ve jest fiyatı gerekli (jest < normal)'); const k = crypto.randomBytes(12).toString('hex');
+  const r = db.prepare('INSERT INTO venues(name,district,normal,jest,key) VALUES(?,?,?,?,?)').run(n, d, nm, js, k); return { id: r.lastInsertRowid, key: k }; });
 R('GET', '/api/admin/commissions', ({ req, url }) => {
   if (req.headers['x-admin-key'] !== ADMIN_KEY) throw err(401, 'Yetkisiz');
   const m = url.searchParams.get('month') || new Date().toISOString().slice(0, 7);
@@ -223,6 +232,8 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
     if (url.pathname.startsWith('/api/')) {
+      const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      if (limited(ip, 'all', 120) || (/^\/api\/(code|verify)$/.test(url.pathname) && limited(ip, url.pathname, 10))) throw err(429, 'Çok fazla istek. Biraz bekle.');
       let raw = ''; for await (const ch of req) { raw += ch; if (raw.length > 1e5) throw err(413, 'Çok büyük'); }
       let body = {}; if (raw) try { body = JSON.parse(raw); } catch { throw err(400, 'Geçersiz JSON'); }
       for (const [m, re, f] of routes) {
