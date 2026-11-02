@@ -9,12 +9,16 @@ const ADMIN_KEY = process.env.JEST_ADMIN_KEY || 'admin-dev';
 const COMMISSION = +process.env.JEST_COMMISSION || 8;     // TL, onaylanan her jest için mekândan
 // Kapalı pilot: JEST_KAPALI=1 ve JEST_KODLAR=KOD1,KOD2 ile yalnızca kodu olan kayıt olur. Kayıtlı üye girişi etkilenmez.
 const CODES = (process.env.JEST_KODLAR || '').split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
-const CLOSED = process.env.JEST_KAPALI === '1' || (DEV && CODES.length > 0);
+// Pilot kipi (JEST_PILOT=1): SMS yok. JEST_KODLAR içindeki her kod bir kişiye verilir (6-8 hane, rakam); ilk kullanan numaraya bağlanır, giriş kodu olarak da o kullanılır.
+const PILOT = process.env.JEST_PILOT === '1';
+const CLOSED = process.env.JEST_KAPALI === '1' || PILOT || (DEV && CODES.length > 0);
+const pilotFails = new Map();
 const db = new DatabaseSync(process.env.JEST_DB || path.join(__dirname, 'jest.db'));
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, phone TEXT UNIQUE, name TEXT, username TEXT UNIQUE, created INTEGER);
 CREATE TABLE IF NOT EXISTS codes(phone TEXT PRIMARY KEY, code TEXT, exp INTEGER, tries INTEGER DEFAULT 0, sent INTEGER);
+CREATE TABLE IF NOT EXISTS pilot_codes(code TEXT PRIMARY KEY, phone TEXT);
 CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, user_id INTEGER, created INTEGER);
 CREATE TABLE IF NOT EXISTS venues(id INTEGER PRIMARY KEY, name TEXT, district TEXT, normal INTEGER, jest INTEGER, key TEXT);
 CREATE TABLE IF NOT EXISTS invites(id INTEGER PRIMARY KEY, host_id INTEGER, venue_id INTEGER, at INTEGER, status TEXT, created INTEGER);
@@ -77,6 +81,7 @@ const R = (m, p, f) => routes.push([m, new RegExp('^' + p.replace(/:(\w+)/g, '(?
 // ---- giriş: SMS kodu + 18 yaş belirteci ----
 R('POST', '/api/code', async ({ body }) => {
   const phone = normPhone(body.phone); if (!phone) throw err(400, 'Telefon numarası geçersiz');
+  if (PILOT) return { ok: true, pilot: true };
   const c = db.prepare('SELECT * FROM codes WHERE phone=?').get(phone);
   if (c && now() - c.sent < 30000) throw err(429, 'Kodu biraz sonra tekrar iste');
   const code = DEV ? '123456' : String(crypto.randomInt(100000, 1000000));
@@ -96,25 +101,35 @@ async function ageVerified(token) {              // Gerçek: e-Devlet yaş belir
 }
 R('POST', '/api/verify', async ({ body }) => {
   const phone = normPhone(body.phone); if (!phone) throw err(400, 'Telefon numarası geçersiz');
+  if (PILOT) {
+    const f = (pilotFails.get(phone) || []).filter(x => now() - x < 600000);
+    if (f.length >= 5) throw err(429, 'Çok fazla deneme. 10 dakika sonra tekrar dene.');
+    const pc = String(body.code || '').trim();
+    const row = CODES.includes(pc) ? db.prepare('SELECT * FROM pilot_codes WHERE code=?').get(pc) : null;
+    if (!CODES.includes(pc) || (row && row.phone !== phone)) { f.push(now()); pilotFails.set(phone, f); throw err(400, 'Kod yanlış'); }
+    if (!row) db.prepare('INSERT INTO pilot_codes(code,phone) VALUES(?,?)').run(pc, phone);
+    body.inviteCode = pc;
+  } else {
   const c = db.prepare('SELECT * FROM codes WHERE phone=?').get(phone);
   if (!c || c.exp < now()) throw err(400, 'Kod süresi doldu');
   if (c.tries >= 5) throw err(429, 'Çok fazla deneme');
   if (c.code !== String(body.code)) { db.prepare('UPDATE codes SET tries=tries+1 WHERE phone=?').run(phone); throw err(400, 'Kod yanlış'); }
+  }
   let u = db.prepare('SELECT * FROM users WHERE phone=?').get(phone);
   if (!u) {
     const name = String(body.name || '').trim().slice(0, 40); if (name.length < 2) throw err(400, 'Adını yaz');
-    if (CLOSED && !CODES.includes(String(body.inviteCode || '').trim().toUpperCase())) throw err(403, 'Kapalı pilot: geçerli davet kodu gerekli');
+    if (CLOSED && !CODES.includes(String(body.inviteCode || '').trim().toUpperCase()) && !CODES.includes(String(body.inviteCode || '').trim())) throw err(403, 'Kapalı pilot: geçerli davet kodu gerekli');
     if (body.terms !== true) throw err(400, 'Metinleri onaylaman gerekir');
     if (!(await ageVerified(body.ageToken))) throw err(403, '18 yaş doğrulaması gerekli');
     const r = db.prepare('INSERT INTO users(phone,name,username,created) VALUES(?,?,?,?)').run(phone, name, newUsername(name), now());
     u = db.prepare('SELECT * FROM users WHERE id=?').get(r.lastInsertRowid);
   }
-  db.prepare('DELETE FROM codes WHERE phone=?').run(phone);
+  if (!PILOT) db.prepare('DELETE FROM codes WHERE phone=?').run(phone);
   const token = crypto.randomBytes(24).toString('hex');
   db.prepare('INSERT INTO sessions(token,user_id,created) VALUES(?,?,?)').run(token, u.id, now());
   return { token, user: pubUser(u) };
 });
-R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN }));
+R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT }));
 R('GET', '/api/me', ({ req }) => ({ user: pubUser(auth(req)) }));
 R('POST', '/api/logout', ({ req }) => { auth(req); db.prepare('DELETE FROM sessions WHERE token=?').run(req.headers.authorization.replace('Bearer ', '')); return { ok: true }; });
 
@@ -226,6 +241,10 @@ R('GET', '/api/invites/:id/receipt', ({ req, p }) => {
 
 // ---- mekân ve yönetim ----
 R('GET', '/api/venue/today', ({ req }) => { const v = venueAuth(req); return { venue: v.name, invites: db.prepare('SELECT id,at,status FROM invites WHERE venue_id=? AND at BETWEEN ? AND ? ORDER BY at').all(v.id, now() - 6 * 3600000, now() + 24 * 3600000) }; });
+if (PILOT) {   // Pilot: mekân anahtarları JEST_SECRET'tan türetilir; eski deneme anahtarları (venue-...) geçersiz olur.
+  const upd = db.prepare('UPDATE venues SET key=? WHERE id=?');
+  for (const v of db.prepare('SELECT id,name FROM venues').all()) upd.run('mk-' + crypto.createHmac('sha256', SECRET).update('venue:' + v.name).digest('hex').slice(0, 14), v.id);
+}
 const adminOnly = req => { if (req.headers['x-admin-key'] !== ADMIN_KEY) throw err(401, 'Yetkisiz'); };
 R('GET', '/api/admin/venues', ({ req }) => { adminOnly(req); return { venues: db.prepare('SELECT id,name,district,normal,jest,key FROM venues').all() }; });
 R('POST', '/api/admin/venues/:id/rotate', ({ req, p }) => { adminOnly(req); const k = crypto.randomBytes(12).toString('hex'); const r = db.prepare('UPDATE venues SET key=? WHERE id=?').run(k, +p.id); if (!r.changes) throw err(404, 'Mekan yok'); return { id: +p.id, key: k }; });
