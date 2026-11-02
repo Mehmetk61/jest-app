@@ -1,4 +1,4 @@
-# JEST yayın rehberi (v0.1)
+# Jestora yayın rehberi (v0.1)
 
 ## Mimari (ultra sade)
 - Tek sunucu: `server.js` (Node 22, sıfır bağımlılık, SQLite dosyası). Web uygulaması `public/` altında.

@@ -1,6 +1,6 @@
 {
   "appId": "app.jest.pilot",
-  "appName": "JEST",
+  "appName": "Jestora",
   "webDir": "public",
   "server": { "url": "https://jest-app-153s.onrender.com", "cleartext": false },
   "ios": { "contentInset": "always" },

@@ -1,4 +1,4 @@
-<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#0F1B3D"><meta name="apple-mobile-web-app-capable" content="yes"><title>JEST</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#0F1B3D"><meta name="apple-mobile-web-app-capable" content="yes"><title>Jestora</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Baloo+2:wght@800&display=swap">
 <style>
@@ -188,7 +188,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
 
 <div class="app">
   <header>
-    <div class="logo"><i class="lg"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(-3 0) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#FF7A1A"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#FF7A1A"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#FF7A1A"/></g><g transform="translate(103 0) scale(-1 1) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#C8F560"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#C8F560"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#C8F560"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#C8F560"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#C8F560"/></g><path d="M50 6V14M35 10L39 17M65 10L61 17" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/></svg></i><span class="wmk">jest</span></div>
+    <div class="logo"><i class="lg"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(-3 0) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#FF7A1A"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#FF7A1A"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#FF7A1A"/></g><g transform="translate(103 0) scale(-1 1) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#C8F560"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#C8F560"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#C8F560"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#C8F560"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#C8F560"/></g><path d="M50 6V14M35 10L39 17M65 10L61 17" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/></svg></i><span class="wmk">jestora</span></div>
     <span class="clock" id="clock" aria-label="Şu anki saat"></span><span class="demo">Demo</span>
   </header>
   <div class="steps" id="steps" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
@@ -220,7 +220,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
     <div class="den"><button class="chip" id="denBtn" type="button" aria-expanded="false">Denemeler ▾</button>
       <div id="denBox" hidden><p class="sub" style="font-size:13px;margin-bottom:8px">Pilotta test edilecek özellikler. Çekirdek akışın dışındadır.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="chip" id="feedBtn" type="button">Akış</button><button class="chip" id="roadBtn" type="button">Yolda: şarkılarım</button></div></div></div>
     <div class="den"><button class="chip" id="fbBtn" type="button">Fikrini söyle</button>
-      <div class="cmp" id="fbBox" hidden style="margin-top:8px"><div style="font-weight:800">JEST'i nasıl buldun?</div>
+      <div class="cmp" id="fbBox" hidden style="margin-top:8px"><div style="font-weight:800">Jestora'yı nasıl buldun?</div>
         <div class="chips" id="fbStars" role="radiogroup" aria-label="Puan"></div>
         <textarea id="fbTxt" rows="2" maxlength="300" placeholder="Neyi sevdin, neyi karıştırdı?"></textarea>
         <div style="display:flex;gap:8px"><button class="btn" id="fbGo" type="button" style="width:auto;padding:10px 22px">Gönder</button><button class="chip" id="fbNo" type="button">Vazgeç</button></div>
@@ -265,7 +265,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
     </form>
     <div class="rpt" id="ageBox" hidden>
       <h3 style="margin:0">Yaşını e-Devlet ile doğrula</h3>
-      <p class="sub" style="margin:0">JEST 18 yaş ve üzeri içindir. e-Devlet yalnızca "18 yaşını doldurdu" bilgisini veren bir belirteç üretir. Kimlik numaran, adın ya da doğum tarihin JEST'e gelmez.</p>
+      <p class="sub" style="margin:0">Jestora 18 yaş ve üzeri içindir. e-Devlet yalnızca "18 yaşını doldurdu" bilgisini veren bir belirteç üretir. Kimlik numaran, adın ya da doğum tarihin Jestora'ya gelmez.</p>
       <div class="err" id="ageErr" role="alert"></div>
       <button class="btn" type="button" id="ageOk">e-Devlet'ten belirteç al (demo: 18+)</button>
       <button class="chip" type="button" id="ageNo">Demo: 18 yaşından küçüğüm</button>
@@ -335,7 +335,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
     </div>
     <label class="chk"><input type="checkbox" id="age"> 18 yaşından büyüğüm.</label>
     <button class="btn" id="make" disabled>Daveti hazırla</button>
-    <footer>Örnek mekanlar ve fiyatlar gösterim içindir. JEST senin parana dokunmaz; ödeme mekanda yapılır.</footer>
+    <footer>Örnek mekanlar ve fiyatlar gösterim içindir. Jestora senin parana dokunmaz; ödeme mekanda yapılır.</footer>
   </section>
 
   <!-- 2 DAVET HAZIR -->
@@ -418,7 +418,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
     </div>
     <div class="card rcpt" id="rcpt"></div>
     <button class="btn" id="again">Yeni jest daveti</button>
-    <footer>Ödeme mekanda, kişilerin kendi arasında yapıldı. JEST para tutmaz. Komisyon mekana aylık faturalanır. Rakamlar örnektir.</footer>
+    <footer>Ödeme mekanda, kişilerin kendi arasında yapıldı. Jestora para tutmaz. Komisyon mekana aylık faturalanır. Rakamlar örnektir.</footer>
   </section>
 
   <!-- 8 MESAJ -->
@@ -480,7 +480,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
     <div class="err" id="rdErr" role="alert"></div>
     <p class="sub" style="font-size:13px" id="rdHint">Kutuları işaretlersen sadece seçtiklerin çalar. Hiçbiri seçili değilse hepsi sırayla çalar.</p>
     <div id="rdList" style="display:flex;flex-direction:column;gap:8px"></div>
-    <footer>JEST şarkı sunmaz ve saklamaz. Şarkılar senin telefonundaki kendi dosyalarındır, kimseye gönderilmez. Demo: şarkılar yalnızca bu sayfa açıkken durur. Telefon kilit ekranından kontrol desteklenir. Gerçek uygulamada şarkılar cihazda kalıcı saklanır ve ekran kapalıyken kesintisiz çalar.</footer>
+    <footer>Jestora şarkı sunmaz ve saklamaz. Şarkılar senin telefonundaki kendi dosyalarındır, kimseye gönderilmez. Demo: şarkılar yalnızca bu sayfa açıkken durur. Telefon kilit ekranından kontrol desteklenir. Gerçek uygulamada şarkılar cihazda kalıcı saklanır ve ekran kapalıyken kesintisiz çalar.</footer>
   </section>
 
   <!-- 10 AKIŞ -->
@@ -510,7 +510,7 @@ body.launch #msgJ,body.launch .den{display:none!important}
 
 </div>
 <div class="conf" id="conf" aria-hidden="true"></div>
-<div id="splash" role="img" aria-label="JEST, Bir jest yeter"><div class="mk"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(-3 0) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#FF7A1A"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#FF7A1A"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#FF7A1A"/></g><g transform="translate(103 0) scale(-1 1) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#C8F560"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#C8F560"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#C8F560"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#C8F560"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#C8F560"/></g><path d="M50 6V14M35 10L39 17M65 10L61 17" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/></svg></div><div class="wm">jest</div><div class="tg">Bir jest yeter.</div></div>
+<div id="splash" role="img" aria-label="Jestora, Bir jest yeter"><div class="mk"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(-3 0) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#FF7A1A"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#FF7A1A"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#FF7A1A"/></g><g transform="translate(103 0) scale(-1 1) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#C8F560"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#C8F560"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#C8F560"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#C8F560"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#C8F560"/></g><path d="M50 6V14M35 10L39 17M65 10L61 17" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/></svg></div><div class="wm">jestora</div><div class="tg">Bir jest yeter.</div></div>
 
 <script>
 const REASONS=['Özledim','Kutlama','Teşekkür','Geçmiş olsun','Barışma','İş görüşmesi','Sohbet','Hedef','Diğer'];
@@ -520,7 +520,7 @@ const VENUES=[
  {id:'b',area:'Kadıköy',name:'Moda Fırın',meta:'Örnek üye mekan · Moda',normal:150,jest:120,fee:12},
  {id:'d',area:'Beşiktaş',name:'Çarşı Kahvecisi',meta:'Örnek üye mekan · Beşiktaş',normal:90,jest:72,fee:7},
  {id:'e',area:'Üsküdar',name:'Sahil Kafe',meta:'Örnek üye mekan · Üsküdar',normal:110,jest:88,fee:9},
- {id:'c',area:'*',name:'Başka bir yer',meta:'Üye değil · normal ödeme, JEST indirimi yok',normal:0,jest:0,fee:0}
+ {id:'c',area:'*',name:'Başka bir yer',meta:'Üye değil · normal ödeme, Jestora indirimi yok',normal:0,jest:0,fee:0}
 ];
 const MONTHS=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 const DAYS=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
@@ -620,7 +620,7 @@ function openChat(n){S.cn=n;UNR[n]=0;$('rpt').hidden=true;$('rptDone').hidden=tr
 function sendMsg(t){
   t=(t||'').trim();var n=S.cn;if(!t||BLK[n])return;
   var w=modHard(t);
-  if(w){$('chErr').textContent='"'+w+'" JEST’te yasak: bahis içeren mesaj gönderilemez.';return}
+  if(w){$('chErr').textContent='"'+w+'" Jestora’da yasak: bahis içeren mesaj gönderilemez.';return}
   var sw=modSoft(t);if(sw&&SOFTOK!==t){SOFTOK=t;$('chErr').textContent=SOFTMSG(sw);return}
   $('chErr').textContent='';(CHAT[n]=CHAT[n]||[]).push({me:true,t:t,h:hhmm()});$('chIn').value='';renderChat();
   setTimeout(function(){if(BLK[n])return;(CHAT[n]=CHAT[n]||[]).push({me:false,t:RP[rpi++%RP.length],h:hhmm()});if(S.cn===n&&!$('s8').hidden)renderChat();else{UNR[n]=(UNR[n]||0)+1;if(!$('s7').hidden)renderFriends()}},900);
@@ -646,7 +646,7 @@ function mmss(t){t=isFinite(t)?Math.floor(t):0;return Math.floor(t/60)+':'+pad(t
 function sname(n){return n.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim()||n}
 function queue(){var q=SONGS.filter(function(x){return x.sel});return q.length?q:SONGS}
 function playSong(x){if(!x)return;NOW=x;AU.src=x.url;AU.play().catch(function(){});
-  try{if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:x.name,artist:'JEST · Yolda'});navigator.mediaSession.setActionHandler('play',function(){AU.play()});navigator.mediaSession.setActionHandler('pause',function(){AU.pause()});navigator.mediaSession.setActionHandler('nexttrack',function(){nextSong(false)});navigator.mediaSession.setActionHandler('previoustrack',prevSong)}}catch(e){}
+  try{if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:x.name,artist:'Jestora · Yolda'});navigator.mediaSession.setActionHandler('play',function(){AU.play()});navigator.mediaSession.setActionHandler('pause',function(){AU.pause()});navigator.mediaSession.setActionHandler('nexttrack',function(){nextSong(false)});navigator.mediaSession.setActionHandler('previoustrack',prevSong)}}catch(e){}
   drawRoad()}
 function nextSong(auto){
   var q=queue();if(!q.length)return;
@@ -721,11 +721,11 @@ function scene(k){
 FEED=[
  {id:++fid,t:'a',who:'Elif',venue:'Moda Fırın',member:true,when:'28 Ekim',media:[{k:'img',url:scene('bakery')},{k:'img',url:scene('cafe')}],cap:'Seni çok özlemişim, simit de harikaydı.',likes:3,sample:true},
  {id:++fid,t:'a',who:'Mert',venue:'Sahil Kafe',member:true,when:'25 Ekim',media:[{k:'img',url:scene('sea')}],cap:'Manzara şahane, jest fiyatı da cabası.',likes:5,sample:true},
- {id:++fid,t:'a',who:'Deniz',venue:'Mavi Kapı Kafe',member:false,when:'20 Ekim',media:[{k:'img',url:scene('cafe')},{k:'img',url:scene('sea')},{k:'img',url:scene('bakery')}],cap:'JEST üyesi değil ama yeri çok güzel.',likes:2,sample:true},
+ {id:++fid,t:'a',who:'Deniz',venue:'Mavi Kapı Kafe',member:false,when:'20 Ekim',media:[{k:'img',url:scene('cafe')},{k:'img',url:scene('sea')},{k:'img',url:scene('bakery')}],cap:'Jestora üyesi değil ama yeri çok güzel.',likes:2,sample:true},
  {id:++fid,t:'m',who:'Kadıköy Kahve Atölyesi',venue:'Kadıköy Kahve Atölyesi',member:true,when:'Bu hafta',media:[{k:'img',url:scene('cafe')}],cap:'Jest fiyatı: 100 yerine 80 TL. Gel, çekirdeklerimizi birlikte seçelim.',likes:8,sample:true},
  {id:++fid,t:'m',who:'Moda Fırın',venue:'Moda Fırın',member:true,when:'Bu hafta',media:[{k:'img',url:scene('bakery')}],cap:'Sabah taze simit, jest fiyatı 120 TL menü.',likes:6,sample:true}
 ];
-function fmeta(f){return f.venue+(f.t==='a'?(f.member?' · Üye mekan':' · JEST üyesi değil'):'')}
+function fmeta(f){return f.venue+(f.t==='a'?(f.member?' · Üye mekan':' · Jestora üyesi değil'):'')}
 function renderFeed(){
   $('fdA').setAttribute('aria-pressed',String(feedTab==='a'));$('fdM').setAttribute('aria-pressed',String(feedTab==='m'));
   $('fdNew').hidden=false;
@@ -783,7 +783,7 @@ function cmAddVid(f){
 function cmShare(){
   var cap=$('cmCap').value.trim();
   var w=modHard(cap);
-  if(w){$('cmErr').textContent='"'+w+'" JEST’te yasak: bahis içeren paylaşım yapılamaz.';return}
+  if(w){$('cmErr').textContent='"'+w+'" Jestora’da yasak: bahis içeren paylaşım yapılamaz.';return}
   var sw=modSoft(cap);if(sw&&SOFTOK!==cap){SOFTOK=cap;$('cmErr').textContent=SOFTMSG(sw);return}
   var media=CM.vid?[CM.vid]:CM.imgs.slice();
   if(!media.length&&!cap){$('cmErr').textContent='Bir fotoğraf, video ya da yazı ekle.';return}
@@ -890,14 +890,14 @@ function authSubmit(e){
   otpReset();renderHome();go(7);
 }
 var LEGAL={
-a:['Aydınlatma metni (KVKK m.10)',['Veri sorumlusu: [JEST işletmesinin unvanı ve adresi, kuruluşta yazılacak].','İşlenen veriler: ad soyad, kullanıcı adı, telefon numarası, davet ve jest kayıtları, mesajlar, paylaştığın foto/video/ses, yaş doğrulama sonucu (yalnızca 18+ bilgisi).','Amaçlar: hesabını açmak ve doğrulamak, davetleri ve jestleri yürütmek, işletme komisyonunu hesaplamak, kötüye kullanımı önlemek, yasal yükümlülükler.','Hukuki sebepler: sözleşmenin kurulması ve ifası, hukuki yükümlülük, meşru menfaat; foto, video ve konum gibi isteğe bağlı veriler için açık rıza.','Aktarım: SMS gönderen hizmet sağlayıcı, bulut barındırma sağlayıcısı, jest yaptığın işletme (yalnızca jest için gerekli bilgi), yetkili kamu kurumları.','Haklar (m.11): verinin işlenip işlenmediğini öğrenme, bilgi isteme, düzeltme, silme, itiraz. Başvuru: [iletişim adresi, kuruluşta yazılacak].','JEST para tutmaz, kart bilgisi almaz.']],
-t:['Kullanım şartları',['JEST 18 yaş ve üzeri içindir; yaş e-Devlet belirteciyle doğrulanır.','JEST tanıdıklarını bir mekanda buluşmaya davet etmek içindir. Eşleştirme, flört, bahis ve para karşılığı buluşma yasaktır.','Jest bedeli işletmede ödenir. JEST ödeme tutmaz; komisyon işletmeye aylık faturalanır.','Hesap sahibi paylaştığı içerikten sorumludur. Hakaret, taciz, yasa dışı içerik yasaktır. Bildir ve engelle her mesajda vardır; ihlalde içerik kaldırılır, hesap kapatılabilir.','QR onayı iki tarafça yapılır. Sahte onay hesabın kapanmasına yol açar.','Hesabını istediğin zaman silebilirsin.']]};
+a:['Aydınlatma metni (KVKK m.10)',['Veri sorumlusu: [Jestora işletmesinin unvanı ve adresi, kuruluşta yazılacak].','İşlenen veriler: ad soyad, kullanıcı adı, telefon numarası, davet ve jest kayıtları, mesajlar, paylaştığın foto/video/ses, yaş doğrulama sonucu (yalnızca 18+ bilgisi).','Amaçlar: hesabını açmak ve doğrulamak, davetleri ve jestleri yürütmek, işletme komisyonunu hesaplamak, kötüye kullanımı önlemek, yasal yükümlülükler.','Hukuki sebepler: sözleşmenin kurulması ve ifası, hukuki yükümlülük, meşru menfaat; foto, video ve konum gibi isteğe bağlı veriler için açık rıza.','Aktarım: SMS gönderen hizmet sağlayıcı, bulut barındırma sağlayıcısı, jest yaptığın işletme (yalnızca jest için gerekli bilgi), yetkili kamu kurumları.','Haklar (m.11): verinin işlenip işlenmediğini öğrenme, bilgi isteme, düzeltme, silme, itiraz. Başvuru: [iletişim adresi, kuruluşta yazılacak].','Jestora para tutmaz, kart bilgisi almaz.']],
+t:['Kullanım şartları',['Jestora 18 yaş ve üzeri içindir; yaş e-Devlet belirteciyle doğrulanır.','Jestora tanıdıklarını bir mekanda buluşmaya davet etmek içindir. Eşleştirme, flört, bahis ve para karşılığı buluşma yasaktır.','Jest bedeli işletmede ödenir. Jestora ödeme tutmaz; komisyon işletmeye aylık faturalanır.','Hesap sahibi paylaştığı içerikten sorumludur. Hakaret, taciz, yasa dışı içerik yasaktır. Bildir ve engelle her mesajda vardır; ihlalde içerik kaldırılır, hesap kapatılabilir.','QR onayı iki tarafça yapılır. Sahte onay hesabın kapanmasına yol açar.','Hesabını istediğin zaman silebilirsin.']]};
 function showLegal(k){var d=LEGAL[k];$('lgH').textContent=d[0];$('lgB').innerHTML='';d[1].forEach(function(t){var p=document.createElement('p');p.style.margin='0';p.textContent=t;$('lgB').appendChild(p)});$('legal').hidden=false;$('authForm').hidden=true}
 function authInit(){
   $('lgA').onclick=function(e){e.preventDefault();showLegal('a')};$('lgT').onclick=function(e){e.preventDefault();showLegal('t')};
   $('lgX').onclick=function(){$('legal').hidden=true;$('authForm').hidden=false};
   $('ageOk').onclick=function(){AGEOK=true;authSubmit({preventDefault:function(){}})};
-  $('ageNo').onclick=function(){$('ageErr').textContent='e-Devlet belirteci 18 yaş altı gösteriyor. JEST 18 yaş ve üzeri içindir, hesap açılamaz.'};
+  $('ageNo').onclick=function(){$('ageErr').textContent='e-Devlet belirteci 18 yaş altı gösteriyor. Jestora 18 yaş ve üzeri içindir, hesap açılamaz.'};
   $('tabUp').onclick=()=>{authMode='up';authUI()};
   $('tabIn').onclick=()=>{authMode='in';authUI()};
   $('authForm').onsubmit=e=>e.preventDefault();
@@ -979,7 +979,7 @@ function sendProp(){
   if(nd<new Date()){$('perr').textContent='Geçmiş bir zaman öneremezsin.';return}
   const pn=$('pnote').value.trim();
   const bw=modHard(pn);
-  if(bw){$('perr').textContent='"'+bw+'" kelimesi JEST\'te kullanılamaz. Başka bir şekilde yaz.';return}
+  if(bw){$('perr').textContent='"'+bw+'" kelimesi Jestora\'te kullanılamaz. Başka bir şekilde yaz.';return}
   S.prevDate=S.date;S.pnote=pn;
   S.date=nd;syncSel();setJ('Zaman önerildi');fillInv($('invCard2'));fillInv($('invCard'));
   $('propose').hidden=true;$('ansrow').hidden=true;$('toAyse').hidden=false;
@@ -1005,8 +1005,8 @@ function unameErr(u){
   if(/^[._-]|[._-]$/.test(u))return 'Kullanıcı adı nokta, alt çizgi veya tireyle başlayıp bitemez.';
   if(/[._-]{2}/.test(u))return 'Üst üste iki işaret olamaz (örn. ..).';
   if(!/[a-z]/.test(u))return 'En az bir harf içermeli.';
-  if(RESERVED.includes(u))return 'Bu kullanıcı adı JEST’e ayrılmış.';
-  if(HARD.some(w=>u.includes(asciiU(w))))return 'Bu kullanıcı adı JEST’te kullanılamaz. Başka bir ad dene.';
+  if(RESERVED.includes(u))return 'Bu kullanıcı adı Jestora’ya ayrılmış.';
+  if(HARD.some(w=>u.includes(asciiU(w))))return 'Bu kullanıcı adı Jestora’da kullanılamaz. Başka bir ad dene.';
   if(TAKEN.includes(u))return 'Bu kullanıcı adı alınmış.';
   return '';
 }
@@ -1026,7 +1026,7 @@ const BANNED=HARD;let SOFTOK='';
 const norm=t=>t.toLocaleLowerCase('tr').replace(/[^\p{L}]/gu,'');
 const modHard=t=>{const n=norm(t);return HARD.find(w=>n.includes(norm(w)))};
 const modSoft=t=>{const n=norm(t);return SOFT.find(w=>n.includes(norm(w)))};
-const SOFTMSG=w=>'Bu ifade ("'+w+'") JEST kurallarına aykırı olabilir. Düzenle ya da yine de göndermek için tekrar bas. Rahatsız edici içerik bildirilebilir.';
+const SOFTMSG=w=>'Bu ifade ("'+w+'") Jestora kurallarına aykırı olabilir. Düzenle ya da yine de göndermek için tekrar bas. Rahatsız edici içerik bildirilebilir.';
 const vname=()=>{const v=VENUES.find(x=>x.id===S.venue);const p=S.pickName||'';return v.id==='c'&&p?p:v.name};
 function updFind(){const p=$('place').value.trim();$('findlink').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((p||'kafe')+' '+S.area+' İstanbul')}
 function dec(x){x=x.replace(/\+/g,' ');try{return decodeURIComponent(x)}catch(e){return x}}
@@ -1102,7 +1102,7 @@ function bad(){
 function check(){
   const w=bad();
   const sw=modSoft($('note').value+' '+$('tnote').value);
-  $('err').textContent=w?'"'+w+'" JEST\'te yasak: bahis içeren davet gönderilemez.':(sw?'Uyarı: "'+sw+'" ifadesi JEST kurallarına aykırı olabilir. Gönderebilirsin, rahatsız edici içerik bildirilebilir.':'');
+  $('err').textContent=w?'"'+w+'" Jestora\'te yasak: bahis içeren davet gönderilemez.':(sw?'Uyarı: "'+sw+'" ifadesi Jestora kurallarına aykırı olabilir. Gönderebilirsin, rahatsız edici içerik bildirilebilir.':'');
   const past=!!S.date&&S.date<new Date();
   $('derr').textContent=past?'Geçmiş bir zaman seçemezsin.':'';
   $('make').disabled=!($('age').checked&&(S.guests.length||$('who').value.trim())&&!w&&!past);
@@ -1164,7 +1164,7 @@ function finish(){
       '<div><span>Mekana komisyon faturası</span><span>'+v.fee*n+' TL</span></div>'+
       '<div class="tot"><span>Mekanda ödenecek (kişi başı '+v.jest+' TL)</span><span>'+v.jest*n+' TL</span></div>';
   }else{
-    r.innerHTML='<div><span>Mekan</span><span></span></div><div><span>Katılımcı</span><span>'+n+' kişi</span></div><div><span>JEST komisyonu</span><span>0 TL</span></div><div class="tot"><span>Ödeme</span><span>Normal fiyat, mekanda</span></div><p class="sub" style="font-size:13px;margin-top:4px">Bu mekan JEST üyesi değil. Üye mekanlarda jest fiyatından yararlanırsın.</p>';
+    r.innerHTML='<div><span>Mekan</span><span></span></div><div><span>Katılımcı</span><span>'+n+' kişi</span></div><div><span>Jestora komisyonu</span><span>0 TL</span></div><div class="tot"><span>Ödeme</span><span>Normal fiyat, mekanda</span></div><p class="sub" style="font-size:13px;margin-top:4px">Bu mekan Jestora üyesi değil. Üye mekanlarda jest fiyatından yararlanırsın.</p>';
     r.querySelector('div span:last-child').textContent=vname();
   }
   setJ('Tamamlandı',true);S.curJ=null;go(5);confetti();

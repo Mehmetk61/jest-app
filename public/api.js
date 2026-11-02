@@ -1,4 +1,4 @@
-// JEST gerçek sunucu bağlantısı: giriş ve kayıt. Davet ekranları sonraki adımda bağlanacak.
+// Jestora gerçek sunucu bağlantısı: giriş ve kayıt. Davet ekranları sonraki adımda bağlanacak.
 (function(){
 var TK='jest-token',CFG={dev:false,closed:false,ageSelf:false};
 function tok(){try{return localStorage.getItem(TK)||''}catch(e){return ''}}
@@ -14,7 +14,7 @@ function ageToken(){return CFG.dev?'DEV-AGE-OK':(CFG.ageSelf?'BEYAN':'')}
 function addInviteRow(){
   if(!CFG.closed||$('invRow'))return;
   var d=document.createElement('div');d.className='f';d.id='invRow';
-  d.innerHTML='<label for="inv">Davet kodu</label><input type="text" id="inv" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="Pilot davet kodun"><small>JEST şu an kapalı pilotta. Kodu sana JEST ekibi verdi.</small>';
+  d.innerHTML='<label for="inv">Davet kodu</label><input type="text" id="inv" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="Pilot davet kodun"><small>Jestora şu an kapalı pilotta. Kodu sana Jestora ekibi verdi.</small>';
   $('phoneRow').parentNode.insertBefore(d,$('phoneRow'));
 }
 var oldUI=window.authUI;

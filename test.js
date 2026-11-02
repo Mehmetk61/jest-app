@@ -45,5 +45,18 @@ try{
  assert.equal((await api('POST','/api/me/delete',{confirm:'hayir'},B.h)).s,400);
  assert.equal((await api('POST','/api/me/delete',{confirm:'SIL'},B.h)).s,200);
  assert.equal((await api('GET','/api/me',null,B.h)).s,401);
+ // düzenleme: saat değişince herkes yeniden yanıtlar
+ const C=await login('05324440000','Can Yıldız');
+ const inv3=(await api('POST','/api/invites',{venueId:v.id,at:at+172800000,guests:['05324440000']},A.h)).j;
+ assert.equal((await api('POST',`/api/invites/${inv3.id}/edit`,{at:at+200000000},C.h)).s,403);
+ assert.equal((await api('POST',`/api/invites/${inv3.id}/edit`,{at:Date.now()-5},A.h)).s,400);
+ const ed=(await api('POST',`/api/invites/${inv3.id}/edit`,{at:at+200000000,venueId:venues[1].id},A.h)).j;assert.equal(ed.venue.id,venues[1].id);assert.equal(ed.guests[0].status,'pending');
+ // yönetici: mekan anahtarı yenileme ve yeni mekan
+ const av=(await api('GET','/api/admin/venues',null,{'x-admin-key':'admin-dev'})).j.venues;assert.equal(av.length,3);
+ assert.equal((await api('GET','/api/admin/venues')).s,401);
+ const rot=(await api('POST','/api/admin/venues/'+av[0].id+'/rotate',null,{'x-admin-key':'admin-dev'})).j;assert.notEqual(rot.key,'venue-moda');
+ assert.equal((await api('POST','/api/venue/scan',{token:'x'},{'x-venue-key':'venue-moda'})).s,401);          // eski anahtar geçersiz
+ assert.equal((await api('POST','/api/admin/venues',{name:'Test',district:'X',normal:50,jest:40},{'x-admin-key':'admin-dev'})).s,200);
+ assert.equal((await api('POST','/api/admin/venues',{name:'Kötü',district:'X',normal:50,jest:60},{'x-admin-key':'admin-dev'})).s,400);
  console.log('TÜM TESTLER GEÇTİ');
 }catch(e){console.error('HATA',e);process.exitCode=1}finally{server.close()}});

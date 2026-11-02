@@ -1,0 +1,32 @@
+const {chromium}=require('playwright');const {spawn}=require('child_process');
+(async()=>{
+ const sv=spawn('node',['--no-warnings','server.js'],{env:{...process.env,JEST_DEV:'1',JEST_KODLAR:'DENEME1',JEST_DB:':memory:',PORT:'3111'}});
+ await new Promise(r=>setTimeout(r,1200));
+ const b=await chromium.launch();const p=await b.newPage({viewport:{width:420,height:900}});
+ const errs=[];p.on('pageerror',e=>errs.push(e.message));
+ await p.goto('http://localhost:3111/');await p.waitForTimeout(800);
+ const t=async(id)=>(await p.textContent('#'+id)).trim();
+ await p.fill('#fn','Ayşe Kaya');await p.fill('#ph','5321110000');
+ await p.check('#kv');
+ await p.click('#authGo');await p.waitForTimeout(300);
+ console.log('davet kodu alanı:',await p.isVisible('#inv'),'| hata:',await t('aerr'));
+ await p.fill('#inv','YANLIS');await p.click('#authGo');await p.waitForTimeout(800);
+ console.log('kod ipucu:',await t('otpHint'));
+ await p.fill('#otp','123456');await p.click('#authGo');await p.waitForTimeout(300);
+ console.log('yaş kutusu görünür:',await p.isVisible('#ageBox'));
+ await p.click('#ageOk');await p.waitForTimeout(800);
+ console.log('yanlış kodla hata:',await t('aerr'));
+ await p.screenshot({path:'/tmp/ui1.png'});
+ // doğru kodla yeniden
+ await p.reload();await p.waitForTimeout(800);
+ await p.fill('#fn','Ayşe Kaya');await p.fill('#ph','5321110000');await p.check('#kv');await p.fill('#inv','deneme1');
+ await p.click('#authGo');await p.waitForTimeout(500);await p.waitForTimeout(31000);
+ await p.click('#otpResend').catch(()=>{});await p.waitForTimeout(500);
+ await p.fill('#otp','123456');await p.click('#authGo');await p.click('#ageOk');await p.waitForTimeout(900);
+ console.log('giriş sonrası ekran s7 görünür:',await p.isVisible('#s7'),'| merhaba:',await t('hello'));
+ await p.reload();await p.waitForTimeout(1000);
+ console.log('yenileyince oturum:',await p.isVisible('#s7'));
+ await p.screenshot({path:'/tmp/ui2.png'});
+ console.log('JS hataları:',errs);
+ await b.close();sv.kill();
+})();

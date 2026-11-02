@@ -1,4 +1,4 @@
-// JEST gerçek davet akışı: liste, yeni davet, yanıt, QR, fiş. Sunucuya bağlıdır.
+// Jestora gerçek davet akışı: liste, yeni davet, yanıt, QR, fiş. Sunucuya bağlıdır.
 (function(){
 var api=window.jestApi,VEN=[],lastLoad=0,busy=false,view=[];
 window.JESTS=[];
@@ -45,8 +45,8 @@ function draw(){oldRender();
   if(wait){var w=el('div','');w.id='rGuide';w.className='card';w.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin-bottom:10px;font-weight:800';w.textContent='Yanıtını bekleyen '+wait+' davetin var.';box.parentNode.insertBefore(w,box)}
   if(!view.length){var e=document.querySelector('#jlist p.sub');if(e)e.textContent=homeTab==='a'?'Aktif jestin yok.':'Geçmiş jestin yok.';
     if(!JESTS.length&&homeTab==='a'){var g=el('div','');g.id='rGuide';g.className='card';g.style.cssText='border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px';
-      g.appendChild(el('b','Nasıl çalışır?'));['1. Tanıdığın birini telefon numarasıyla davet et, yeri ve saati seç.','2. O kabul edince ikiniz de mekânda QR kodunuzu gösterin.','3. Mekân onaylayınca jest fiyatı geçerli olur. Ödeme mekânda yapılır, JEST para tutmaz.'].forEach(function(t){g.appendChild(el('span',t))});
-      g.appendChild(el('small','Not: Karşındaki kişinin de JEST üyesi olması gerekir. Henüz üye değilse önce ona JEST\'i anlat.'));box.parentNode.insertBefore(g,box)}}}
+      g.appendChild(el('b','Nasıl çalışır?'));['1. Tanıdığın birini telefon numarasıyla davet et, yeri ve saati seç.','2. O kabul edince ikiniz de mekânda QR kodunuzu gösterin.','3. Mekân onaylayınca jest fiyatı geçerli olur. Ödeme mekânda yapılır, Jestora para tutmaz.'].forEach(function(t){g.appendChild(el('span',t))});
+      g.appendChild(el('small','Not: Karşındaki kişinin de Jestora üyesi olması gerekir. Henüz üye değilse önce ona Jestora\'i anlat.'));box.parentNode.insertBefore(g,box)}}}
 window.renderHome=function(){draw();if(localStorage.getItem('jest-token'))load()};
 setInterval(function(){var s=$$('s7');if(s&&!s.hidden&&!document.querySelector('.rov'))load(true)},15000);
 
@@ -62,7 +62,7 @@ function dtl(ts){var d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+
 function openNew(){
   var O=overlay(),p=O.p,guests=[];
   p.appendChild(el('h2','Yeni jest daveti'));
-  p.appendChild(el('p','Tanıdığın, JEST üyesi birini davet et. Telefon numarasını yaz.','sub'));
+  p.appendChild(el('p','Tanıdığın, Jestora üyesi birini davet et. Telefon numarasını yaz.','sub'));
   var gl=el('div','');gl.className='chips';p.appendChild(gl);
   var ph=document.createElement('input');ph.type='tel';ph.placeholder='Davet edilen: 5xx xxx xx xx';ph.inputMode='numeric';
   var add=btn('Ekle',function(){var d=ph.value.replace(/\D/g,'').replace(/^0/,'').replace(/^90/,'');
@@ -92,7 +92,7 @@ function openDetail(id){
     p.innerHTML='';var me=window.JEST_ME||{};
     p.appendChild(el('h2',i.venue.name+' · '+i.venue.district));
     p.appendChild(el('p',fmt(i.at),'big'));
-    p.appendChild(el('p','Normal fiyat '+tl(i.venue.normal)+', jest fiyatı '+tl(i.venue.jest)+'. Ödeme mekânda yapılır, JEST para tutmaz.','sub'));
+    p.appendChild(el('p','Normal fiyat '+tl(i.venue.normal)+', jest fiyatı '+tl(i.venue.jest)+'. Ödeme mekânda yapılır, Jestora para tutmaz.','sub'));
     p.appendChild(el('div','Davet sahibi: '+i.host.name+(i.role==='host'?' (sen)':'')));
     i.guests.forEach(function(g){var r=el('div','');r.className='gl';r.appendChild(el('span',g.name+(g.id===me.id?' (sen)':'')));
       var tx={pending:'Bekliyor',accepted:'Kabul etti',declined:'Reddetti',proposed:'Yeni saat önerdi: '+(g.proposal_at?fmt(g.proposal_at):'')}[g.status];r.appendChild(el('b',tx));p.appendChild(r)});
@@ -156,7 +156,7 @@ function showQR(i){
   function show(){if(standalone()||$$('rInst'))return;var b=document.createElement('button');b.id='rInst';b.className='chip';b.type='button';b.textContent='Ana ekrana ekle';b.style.marginLeft='8px';lo.parentNode.appendChild(b);
     b.onclick=function(){if(dp){dp.prompt();dp.userChoice.finally(function(){dp=null;b.remove()})}else iosHelp()}}
   function iosHelp(){var O=overlay(),p=O.p;p.appendChild(el('h2','Ana ekrana ekle'));
-    ['iPhone: Safari ile aç, alttaki Paylaş düğmesine (kare ve yukarı ok) bas, Ana Ekrana Ekle seç.','Android: Chrome ile aç, sağ üstteki üç noktaya bas, Uygulamayı yükle ya da Ana ekrana ekle seç.','Eklenince JEST uygulama gibi tam ekran açılır.'].forEach(function(t){p.appendChild(el('p',t))});
+    ['iPhone: Safari ile aç, alttaki Paylaş düğmesine (kare ve yukarı ok) bas, Ana Ekrana Ekle seç.','Android: Chrome ile aç, sağ üstteki üç noktaya bas, Uygulamayı yükle ya da Ana ekrana ekle seç.','Eklenince Jestora uygulama gibi tam ekran açılır.'].forEach(function(t){p.appendChild(el('p',t))});
     p.appendChild(btn('Tamam',function(){close(O.o)},'chip'))}
   if(/iphone|ipad/i.test(navigator.userAgent)&&!standalone())show();
   setTimeout(function(){if(!dp&&!standalone()&&!$$('rInst')&&lo){show()}},2500);

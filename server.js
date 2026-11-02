@@ -1,4 +1,4 @@
-// JEST sunucu v0.1 — sıfır bağımlılık (Node 22+). Çalıştır: node server.js
+// Jestora sunucu v0.1 — sıfır bağımlılık (Node 22+). Çalıştır: node server.js
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
 const { DatabaseSync } = require('node:sqlite');
 
@@ -81,7 +81,7 @@ R('POST', '/api/code', async ({ body }) => {
   if (c && now() - c.sent < 30000) throw err(429, 'Kodu biraz sonra tekrar iste');
   const code = DEV ? '123456' : String(crypto.randomInt(100000, 1000000));
   db.prepare('INSERT OR REPLACE INTO codes(phone,code,exp,tries,sent) VALUES(?,?,?,0,?)').run(phone, code, now() + 300000, now());
-  await sendSms(phone, `JEST kodun: ${code}`);
+  await sendSms(phone, `Jestora kodun: ${code}`);
   return DEV ? { ok: true, devCode: code } : { ok: true };
 });
 async function sendSms(phone, text) {            // Gerçek sağlayıcı seçilince yalnızca burası değişir.
@@ -141,7 +141,7 @@ R('POST', '/api/invites', ({ req, body }) => {
   const phones = [...new Set((body.guests || []).map(normPhone).filter(Boolean))].filter(p => p !== me.phone).slice(0, 5);
   if (!phones.length) throw err(400, 'En az bir kişi davet et');
   const users = phones.map(p => db.prepare('SELECT * FROM users WHERE phone=?').get(p));
-  if (users.some(u => !u)) throw err(400, 'Davet ettiğin kişi JEST üyesi değil: ' + phones[users.findIndex(u => !u)]);
+  if (users.some(u => !u)) throw err(400, 'Davet ettiğin kişi Jestora üyesi değil: ' + phones[users.findIndex(u => !u)]);
   const r = db.prepare('INSERT INTO invites(host_id,venue_id,at,status,created) VALUES(?,?,?,?,?)').run(me.id, v.id, at, 'open', now());
   users.forEach(u => db.prepare('INSERT INTO guests(invite_id,user_id,status) VALUES(?,?,?)').run(r.lastInsertRowid, u.id, 'pending'));
   return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(r.lastInsertRowid), me);
@@ -221,7 +221,7 @@ R('GET', '/api/invites/:id/receipt', ({ req, p }) => {
   const me = auth(req), i = myInvite(+p.id, me);
   if (i.status !== 'confirmed') throw err(400, 'Henüz onaylanmadı');
   const v = db.prepare('SELECT * FROM venues WHERE id=?').get(i.venue_id);
-  return { invite: i.id, venue: v.name, at: i.at, normal: v.normal, jest: v.jest, saved: v.normal - v.jest, note: 'Ödemeyi mekâna yaptın. JEST para tutmaz.' };
+  return { invite: i.id, venue: v.name, at: i.at, normal: v.normal, jest: v.jest, saved: v.normal - v.jest, note: 'Ödemeyi mekâna yaptın. Jestora para tutmaz.' };
 });
 
 // ---- mekân ve yönetim ----
@@ -256,10 +256,10 @@ const server = http.createServer(async (req, res) => {
     }
     let f = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : url.pathname);
     if (!f.startsWith(path.join(__dirname, 'public')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) f = path.join(__dirname, 'public', 'index.html');
-    if (!fs.existsSync(f)) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('JEST sunucusu çalışıyor. (Ekran dosyaları henüz yüklenmedi.)'); }
+    if (!fs.existsSync(f)) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('Jestora sunucusu çalışıyor. (Ekran dosyaları henüz yüklenmedi.)'); }
     res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream', 'x-content-type-options': 'nosniff' });
     const st = fs.createReadStream(f); st.on('error', () => { if (!res.headersSent) res.writeHead(404); res.end('Bulunamadı'); }); st.pipe(res);
   } catch (e) { ok(res, { error: e.message }, e.code || 500); if (!e.code) console.error(e); }
 });
-if (require.main === module) server.listen(PORT, () => console.log(`JEST http://localhost:${PORT}${DEV ? '  (GELİŞTİRME)' : ''}`));
+if (require.main === module) server.listen(PORT, () => console.log(`Jestora http://localhost:${PORT}${DEV ? '  (GELİŞTİRME)' : ''}`));
 module.exports = { server, db };
