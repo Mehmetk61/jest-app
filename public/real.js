@@ -14,6 +14,7 @@ function stat(i){
   if(i.status==='confirmed')return 'Tamamlandı';
   var me=window.JEST_ME;
   if(i.role==='host'){
+    if(!i.guests.length&&i.invited&&i.invited.length)return 'Üye bekleniyor';
     if(i.guests.some(function(g){return g.status==='proposed'}))return 'Zaman önerildi';
     if(i.guests.some(function(g){return g.status==='accepted'}))return 'Kabul edildi';
     if(i.guests.every(function(g){return g.status==='declined'}))return 'Reddedildi';
@@ -22,7 +23,7 @@ function stat(i){
   if(!g)return 'Bekliyor';
   return {pending:'Yanıt bekliyor',accepted:'Kabul edildi',declined:'Reddettin',proposed:'Zaman önerildi'}[g.status]||'Bekliyor'}
 function mapInv(i){
-  var names=i.role==='host'?i.guests.map(function(g){return g.name}):[i.host.name];
+  var names=i.role==='host'?i.guests.map(function(g){return g.name}).concat((i.invited||[]).map(function(x){return 'Davetli (…'+x.phone.slice(-4)+')'})):[i.host.name];
   var s=stat(i);
   return {id:i.id,names:names,reason:'Jest',place:i.venue.name,when:fmt(i.at),status:s,
     active:(i.status==='open'&&i.at>Date.now()-6*3600000),raw:i}}
@@ -62,7 +63,7 @@ function dtl(ts){var d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+
 function openNew(){
   var O=overlay(),p=O.p,guests=[];
   p.appendChild(el('h2','Yeni jest daveti'));
-  p.appendChild(el('p','Tanıdığın, Jestora üyesi birini davet et. Telefon numarasını yaz.','sub'));
+  p.appendChild(el('p','Tanıdığın birini davet et, telefon numarasını yaz. Henüz üye değilse, ona göndereceğin davet linki hazırlanır.','sub'));
   var gl=el('div','');gl.className='chips';p.appendChild(gl);
   var ph=document.createElement('input');ph.type='tel';ph.placeholder='Davet edilen: 5xx xxx xx xx';ph.inputMode='numeric';
   var add=btn('Ekle',function(){var d=ph.value.replace(/\D/g,'').replace(/^0/,'').replace(/^90/,'');
@@ -96,6 +97,21 @@ function openDetail(id){
     p.appendChild(el('div','Davet sahibi: '+i.host.name+(i.role==='host'?' (sen)':'')));
     i.guests.forEach(function(g){var r=el('div','');r.className='gl';r.appendChild(el('span',g.name+(g.id===me.id?' (sen)':'')));
       var tx={pending:'Bekliyor',accepted:'Kabul etti',declined:'Reddetti',proposed:'Yeni saat önerdi: '+(g.proposal_at?fmt(g.proposal_at):'')}[g.status];r.appendChild(el('b',tx));p.appendChild(r)});
+    if(i.role==='host'&&i.invited&&i.invited.length){
+      p.appendChild(el('h2','Henüz Jestora üyesi olmayanlar'));
+      p.appendChild(el('p','Linki kendi WhatsApp\'ından sen gönderirsin. Link yalnızca bu numaraya özeldir ve bir kez kullanılır.','sub'));
+      i.invited.forEach(function(x){
+        var link=location.origin+'/?davet='+x.token;
+        var msg='Merhaba! Seni Jestora\'da bir jest\'e davet ettim: '+i.venue.name+', '+fmt(i.at)+'. Linke dokunup kayıt ol, davetini görürsün: '+link;
+        var box=el('div','');box.className='gl';box.style.cssText='display:block;margin:8px 0';
+        box.appendChild(el('b','+90 '+x.phone.slice(-10)));
+        var row=el('div','');row.className='row';
+        var wa=document.createElement('a');wa.className='btn';wa.textContent='WhatsApp\'ta gönder';wa.target='_blank';wa.rel='noopener';wa.style.cssText='text-decoration:none;text-align:center;display:block;box-sizing:border-box';wa.href='https://wa.me/'+x.phone.replace(/\D/g,'')+'?text='+encodeURIComponent(msg);row.appendChild(wa);
+        var cp=btn('Mesajı kopyala',function(){var done=function(){cp.textContent='Kopyalandı'};try{navigator.clipboard.writeText(msg).then(done,function(){ta.select()})}catch(e){ta.select()}},'chip');row.appendChild(cp);
+        if(navigator.share){row.appendChild(btn('Diğer uygulamalarla paylaş',function(){navigator.share({text:msg}).catch(function(){})},'chip'))}
+        box.appendChild(row);
+        var ta=document.createElement('textarea');ta.readOnly=true;ta.value=msg;ta.rows=3;ta.style.cssText='width:100%;margin-top:6px;font-size:13px';ta.onclick=function(){ta.select()};box.appendChild(ta);
+        p.appendChild(box)})}
     var er=errBox();
     function act(a,extra){return function(){api('POST','/api/invites/'+i.id+'/respond',Object.assign({action:a},extra||{})).then(function(){return api('GET','/api/invites/'+i.id)}).then(function(n){render(n);load(true)}).catch(function(e){er.textContent=e.message})}}
     if(i.status==='confirmed'){
@@ -124,7 +140,7 @@ function openDetail(id){
     p.appendChild(er);p.appendChild(btn('Kapat',function(){close(O.o)},'chip'));
   }
   api('GET','/api/invites/'+id).then(function(i){render(i);
-    O.o._t.push(setInterval(function(){if(!document.body.contains(O.o))return;api('GET','/api/invites/'+id).then(function(n){if(n.status!==i.status||JSON.stringify(n.guests)!==JSON.stringify(i.guests)){i=n;if(!document.querySelector('.qrov'))render(n);load(true)}}).catch(function(){})},6000))
+    O.o._t.push(setInterval(function(){if(!document.body.contains(O.o))return;api('GET','/api/invites/'+id).then(function(n){if(n.status!==i.status||JSON.stringify(n.guests)!==JSON.stringify(i.guests)||JSON.stringify(n.invited)!==JSON.stringify(i.invited)){i=n;if(!document.querySelector('.qrov'))render(n);load(true)}}).catch(function(){})},6000))
   }).catch(function(e){p.appendChild(el('p',e.message));p.appendChild(btn('Kapat',function(){close(O.o)},'chip'))});
 }
 function editInv(i,O0){

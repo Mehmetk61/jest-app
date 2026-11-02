@@ -11,14 +11,24 @@ function phone(){return '0'+$('ph').value.replace(/\D/g,'')}
 function ageToken(){return CFG.dev?'DEV-AGE-OK':(CFG.ageSelf?'BEYAN':'')}
 
 // kapalı pilot için davet kodu alanı
+var LINK={token:'',info:null};
+try{var qs=new URLSearchParams(location.search).get('davet');if(qs&&/^[a-f0-9]{24}$/.test(qs)){LINK.token=qs;localStorage.setItem('jest-davet',qs)}else{var sv=localStorage.getItem('jest-davet');if(sv&&/^[a-f0-9]{24}$/.test(sv))LINK.token=sv}}catch(e){}
+function linkDone(){LINK={token:'',info:null};try{localStorage.removeItem('jest-davet');if(location.search)history.replaceState(null,'',location.pathname)}catch(e){}var b=$('linkBox');if(b)b.remove()}
+function showLinkBox(){
+  var old=$('linkBox');if(old)old.remove();if(!LINK.token)return;
+  var d=document.createElement('div');d.id='linkBox';d.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin:0 0 12px;font-weight:700';
+  if(LINK.info)d.textContent=LINK.info.host+' seni Jestora\'ya davet etti: '+LINK.info.venue+', '+new Date(LINK.info.at).toLocaleString('tr-TR',{day:'numeric',month:'long',weekday:'long',hour:'2-digit',minute:'2-digit'})+'. Kayıt olurken, davetin yazıldığı numarayı kullan (…'+LINK.info.phoneEnd+' ile biten).';
+  else d.textContent='Bir davet seni bekliyor. Kayıt olurken davetin yazıldığı numarayı kullan.';
+  var t=$('authTitle');t.parentNode.insertBefore(d,t.nextSibling)}
+function loadLink(){if(!LINK.token)return;api('GET','/api/link/'+LINK.token).then(function(j){LINK.info=j;showLinkBox()}).catch(function(e){var t=LINK.token;LINK.token='';try{localStorage.removeItem('jest-davet')}catch(x){}var d=$('linkBox');if(d)d.remove();window.authUI&&window.authUI();var er=$('aerr');if(er)er.textContent=e.message})}
 function addInviteRow(){
-  if(!CFG.closed||$('invRow'))return;
+  if(!CFG.closed||LINK.token||$('invRow'))return;
   var d=document.createElement('div');d.className='f';d.id='invRow';
   d.innerHTML='<label for="inv">Davet kodu</label><input type="text" id="inv" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="Pilot davet kodun"><small>Jestora şu an kapalı pilotta. Kodu sana Jestora ekibi verdi.</small>';
   $('phoneRow').parentNode.insertBefore(d,$('phoneRow'));
 }
 var oldUI=window.authUI;
-window.authUI=function(){oldUI();addInviteRow();var r=$('invRow');if(r)r.hidden=authMode!=='up';if($('inv'))$('inv').readOnly=false};
+window.authUI=function(){oldUI();addInviteRow();var r=$('invRow');if(r)r.hidden=authMode!=='up'||!!LINK.token;showLinkBox();if($('inv'))$('inv').readOnly=false};
 
 window.sendCode=function(){
   var rb=$('otpResend');rb.disabled=true;
@@ -37,7 +47,7 @@ window.authSubmit=function(e){
     var fn=$('fn').value.trim().replace(/\s+/g,' '),m='';
     if(up){if(!nameOk(fn))m=fn.length<2?'Adını ve soyadını yaz.':'Ad yalnızca harf, boşluk, nokta ve kesme işareti içerebilir.'}
     if(!m&&!/^5\d{9}$/.test(fmtPh()))m='Telefon numarası 5 ile başlayan 10 haneli olmalı.';
-    if(!m&&up&&CFG.closed&&!($('inv')&&$('inv').value.trim()))m='Davet kodunu yaz.';
+    if(!m&&up&&CFG.closed&&!LINK.token&&!($('inv')&&$('inv').value.trim()))m='Davet kodunu yaz.';
     if(!m&&up&&!$('kv').checked)m='Aydınlatma metnini ve kullanım şartlarını onaylamalısın.';
     $('aerr').textContent=m;if(m)return;
     authStage=1;['fn','u','ph'].forEach(function(i){$(i).readOnly=true});if($('inv'))$('inv').readOnly=true;
@@ -46,11 +56,11 @@ window.authSubmit=function(e){
   if(c.length<6||c.length>8){$('aerr').textContent=CFG.pilot?'PIN 6 ile 8 rakam olmalı.':'6 haneli kodu yaz.';return}
   $('aerr').textContent='';
   if(up&&!AGEOK){clearInterval(otpTimer);$('authForm').hidden=true;$('ageBox').hidden=false;$('ageErr').textContent='';return}
-  var body={phone:phone(),code:c};
+  var body={phone:phone(),code:c};if(LINK.token)body.linkToken=LINK.token;
   if(up){body.name=$('fn').value.trim().replace(/\s+/g,' ');body.terms=true;body.ageToken=ageToken();body.inviteCode=$('inv')?$('inv').value.trim():''}
   $('authGo').disabled=true;
   api('POST','/api/verify',body).then(function(j){
-    setTok(j.token);window.JEST_ME=j.user;S.user=j.user.username;S.name=j.user.name;saveSess();clearInterval(otpTimer);
+    if(LINK.token)linkDone();setTok(j.token);window.JEST_ME=j.user;S.user=j.user.username;S.name=j.user.name;saveSess();clearInterval(otpTimer);
     $('hello').textContent='Merhaba, '+dname();otpReset();renderHome();go(7);
   }).catch(function(er){
     var msg=er.message;
@@ -67,7 +77,7 @@ $('ageOk').textContent=CFG.dev?'e-Devlet\'ten belirteç al (deneme: 18+)':'18 ya
 $('logout').onclick=function(){api('POST','/api/logout').catch(function(){}).then(function(){setTok('');S.user='';try{localStorage.removeItem('jest-demo-oturum')}catch(e){}authUI();go(0)})};
 
 api('GET','/api/config').then(function(c){
-  CFG=c;
+  CFG=c;loadLink();
   $('ageOk').textContent=c.dev?'e-Devlet\'ten belirteç al (deneme: 18+)':'18 yaşından büyük olduğumu beyan ederim';
   window.authUI();
   if(tok()){api('GET','/api/me').then(function(j){window.JEST_ME=j.user;S.user=j.user.username;S.name=j.user.name;saveSess();$('hello').textContent='Merhaba, '+dname();renderHome();go(7)}).catch(function(){setTok('');try{localStorage.removeItem('jest-demo-oturum')}catch(e){}window.authUI();go(0)})}
