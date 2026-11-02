@@ -105,10 +105,11 @@ function openDetail(id){
         var msg='Merhaba! Seni Jestora\'da bir jest\'e davet ettim: '+i.venue.name+', '+fmt(i.at)+'. Linke dokunup kayıt ol, davetini görürsün: '+link;
         var box=el('div','');box.className='gl';box.style.cssText='display:block;margin:8px 0';
         box.appendChild(el('b','+90 '+x.phone.slice(-10)));
-        var row=el('div','');row.className='row';
+        var row=el('div','');row.className='row';row.style.cssText='display:flex;flex-wrap:wrap;gap:8px';
         var wa=document.createElement('a');wa.className='btn';wa.textContent='WhatsApp\'ta gönder';wa.target='_blank';wa.rel='noopener';wa.style.cssText='text-decoration:none;text-align:center;display:block;box-sizing:border-box';wa.href='https://wa.me/'+x.phone.replace(/\D/g,'')+'?text='+encodeURIComponent(msg);row.appendChild(wa);
         var cp=btn('Mesajı kopyala',function(){var done=function(){cp.textContent='Kopyalandı'};try{navigator.clipboard.writeText(msg).then(done,function(){ta.select()})}catch(e){ta.select()}},'chip');row.appendChild(cp);
-        if(navigator.share){row.appendChild(btn('Diğer uygulamalarla paylaş',function(){navigator.share({text:msg}).catch(function(){})},'chip'))}
+        var cl=btn('Linki kopyala',function(){var d=function(){cl.textContent='Link kopyalandı'};try{navigator.clipboard.writeText(link).then(d,function(){ta.select()})}catch(e){ta.select()}},'chip');row.appendChild(cl);
+        if(navigator.share){row.appendChild(btn('Paylaş',function(){navigator.share({text:msg}).catch(function(){})},'chip'))}
         box.appendChild(row);
         var ta=document.createElement('textarea');ta.readOnly=true;ta.value=msg;ta.rows=3;ta.style.cssText='width:100%;margin-top:6px;font-size:13px';ta.onclick=function(){ta.select()};box.appendChild(ta);
         p.appendChild(box)})}
