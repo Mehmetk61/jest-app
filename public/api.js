@@ -12,7 +12,7 @@ function ageToken(){return CFG.dev?'DEV-AGE-OK':(CFG.ageSelf?'BEYAN':'')}
 
 // kapalı pilot için davet kodu alanı
 function addInviteRow(){
-  if(!CFG.closed||$('invRow'))return;
+  if(!CFG.closed||CFG.pilot||$('invRow'))return;
   var d=document.createElement('div');d.className='f';d.id='invRow';
   d.innerHTML='<label for="inv">Davet kodu</label><input type="text" id="inv" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="Pilot davet kodun"><small>Jestora şu an kapalı pilotta. Kodu sana Jestora ekibi verdi.</small>';
   $('phoneRow').parentNode.insertBefore(d,$('phoneRow'));
@@ -23,7 +23,7 @@ window.authUI=function(){oldUI();addInviteRow();var r=$('invRow');if(r)r.hidden=
 window.sendCode=function(){
   var rb=$('otpResend');rb.disabled=true;
   api('POST','/api/code',{phone:phone()}).then(function(j){
-    $('otpHint').textContent=j.devCode?'Deneme sürümü: SMS gönderilmez, kod '+j.devCode+'.':'+90 '+$('ph').value+' numarasına SMS gönderildi.';
+    $('otpHint').textContent=j.pilot?'Sana verilen kişisel kodu yaz.':j.devCode?'Deneme sürümü: SMS gönderilmez, kod '+j.devCode+'.':'+90 '+$('ph').value+' numarasına SMS gönderildi.';
     var left=30;rb.textContent='Tekrar gönder ('+left+')';clearInterval(otpTimer);
     otpTimer=setInterval(function(){left--;if(left<=0){clearInterval(otpTimer);rb.disabled=false;rb.textContent='Tekrar gönder'}else rb.textContent='Tekrar gönder ('+left+')'},1000);
   }).catch(function(e){$('aerr').textContent=e.message;rb.disabled=false;rb.textContent='Tekrar gönder'});
@@ -36,13 +36,13 @@ window.authSubmit=function(e){
     var fn=$('fn').value.trim().replace(/\s+/g,' '),m='';
     if(up){if(!nameOk(fn))m=fn.length<2?'Adını ve soyadını yaz.':'Ad yalnızca harf, boşluk, nokta ve kesme işareti içerebilir.'}
     if(!m&&!/^5\d{9}$/.test(fmtPh()))m='Telefon numarası 5 ile başlayan 10 haneli olmalı.';
-    if(!m&&up&&CFG.closed&&!($('inv')&&$('inv').value.trim()))m='Davet kodunu yaz.';
+    if(!m&&up&&CFG.closed&&!CFG.pilot&&!($('inv')&&$('inv').value.trim()))m='Davet kodunu yaz.';
     if(!m&&up&&!$('kv').checked)m='Aydınlatma metnini ve kullanım şartlarını onaylamalısın.';
     $('aerr').textContent=m;if(m)return;
     authStage=1;['fn','u','ph'].forEach(function(i){$(i).readOnly=true});if($('inv'))$('inv').readOnly=true;
     $('otpRow').hidden=false;$('authGo').textContent='Doğrula';sendCode();$('otp').focus();return}
   var c=$('otp').value.replace(/\D/g,'');
-  if(c.length!==6){$('aerr').textContent='6 haneli kodu yaz.';return}
+  if(c.length<6||c.length>8){$('aerr').textContent=CFG.pilot?'Sana verilen kişisel kodu yaz.':'6 haneli kodu yaz.';return}
   $('aerr').textContent='';
   if(up&&!AGEOK){clearInterval(otpTimer);$('authForm').hidden=true;$('ageBox').hidden=false;$('ageErr').textContent='';return}
   var body={phone:phone(),code:c};
