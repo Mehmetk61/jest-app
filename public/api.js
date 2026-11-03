@@ -28,7 +28,7 @@ function addInviteRow(){
   $('phoneRow').parentNode.insertBefore(d,$('phoneRow'));
 }
 var oldUI=window.authUI;
-window.authUI=function(){oldUI();addInviteRow();var r=$('invRow');if(r)r.hidden=authMode!=='up'||!!LINK.token;showLinkBox();if($('inv'))$('inv').readOnly=false};
+window.authUI=function(){oldUI();if(CFG&&CFG.pilot){$('authGo').textContent='Devam';var ft=document.querySelector('footer');if(ft)ft.textContent='Kapalı pilot: SMS gönderilmez. Kayıtta seçtiğin 6–8 haneli PIN ile giriş yaparsın. Telefon numaran yalnızca hesabını doğrulamak için kullanılır.'}addInviteRow();var r=$('invRow');if(r)r.hidden=authMode!=='up'||!!LINK.token;showLinkBox();if($('inv'))$('inv').readOnly=false};
 
 window.sendCode=function(){
   var rb=$('otpResend');rb.disabled=true;

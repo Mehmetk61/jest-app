@@ -47,7 +47,7 @@ function draw(){oldRender();
   if(!view.length){var e=document.querySelector('#jlist p.sub');if(e)e.textContent=homeTab==='a'?'Aktif jestin yok.':'Geçmiş jestin yok.';
     if(!JESTS.length&&homeTab==='a'){var g=el('div','');g.id='rGuide';g.className='card';g.style.cssText='border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px';
       g.appendChild(el('b','Nasıl çalışır?'));['1. Tanıdığın birini telefon numarasıyla davet et, yeri ve saati seç.','2. O kabul edince ikiniz de mekânda QR kodunuzu gösterin.','3. Mekân onaylayınca jest fiyatı geçerli olur. Ödeme mekânda yapılır, Jestora para tutmaz.'].forEach(function(t){g.appendChild(el('span',t))});
-      g.appendChild(el('small','Not: Karşındaki kişinin de Jestora üyesi olması gerekir. Henüz üye değilse önce ona Jestora\'i anlat.'));box.parentNode.insertBefore(g,box)}}}
+      g.appendChild(el('small','Not: Karşındaki kişi henüz üye değilse, ona göndereceğin davet linki hazırlanır; link kayıt ekranında seni karşılar.'));box.parentNode.insertBefore(g,box)}}}
 window.renderHome=function(){draw();if(localStorage.getItem('jest-token'))load()};
 setInterval(function(){var s=$$('s7');if(s&&!s.hidden&&!document.querySelector('.rov'))load(true)},15000);
 
