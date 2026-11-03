@@ -1,0 +1,1222 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#0F1B3D"><meta name="apple-mobile-web-app-capable" content="yes"><title>Jestora</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Baloo+2:wght@800&display=swap">
+<style>
+/* Layout: tek sütunlu telefon uygulaması, ortada; üstte adım çubuğu, altta ana eylem. */
+:root{
+  --navy:#0F1B3D; --orange:#FF7A1A; --cream:#FFF6EC; --green:#2BB673; --slate:#5B6482;
+  --bg:#FFF6EC; --card:#FFFFFF; --fg:#0F1B3D; --muted:#5B6482; --line:#EBDCC8; --chip:#FFE9D3; --onorange:#0F1B3D;
+  --font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A1230; --card:#142048; --fg:#FFF6EC; --muted:#9BA5C7; --line:#26336A; --chip:#1F2C5E; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0A1230; --card:#142048; --fg:#FFF6EC; --muted:#9BA5C7; --line:#26336A; --chip:#1F2C5E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-weight:800;font-size:28px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.logo i{width:30px;height:30px;border-radius:50%;background:var(--orange);display:inline-grid;place-items:center}
+.logo svg{width:18px;height:18px}
+.demo{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+.steps{display:flex;gap:6px}
+.steps b{flex:1;height:5px;border-radius:9px;background:var(--line)}
+.steps b.on{background:var(--orange)}
+.steps b.done{background:var(--green)}
+h1{font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:0;text-wrap:balance;font-weight:800}
+h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:700}
+p{margin:0}
+.sub{color:var(--muted)}
+section[hidden]{display:none}
+section{display:flex;flex-direction:column;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-weight:700;font-size:15px;color:var(--fg);background:var(--chip);border:2px solid transparent;border-radius:99px;padding:8px 14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--orange);color:var(--onorange);border-color:var(--navy)}
+input[type=text],input[type=password],input[type=tel],textarea{width:100%;font:inherit;color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px 14px}
+textarea{resize:vertical;min-height:70px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.venue{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;font:inherit;color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;cursor:pointer}
+.venue[aria-pressed="true"]{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,122,26,.25)}
+.venue .t{font-weight:800}
+.venue .m{font-size:14px;color:var(--muted)}
+.price{margin-left:auto;text-align:right;white-space:nowrap}
+.price s{color:var(--muted);font-size:14px;display:block}
+.price strong{font-size:20px;color:var(--orange)}
+.btn{font:inherit;font-weight:800;font-size:17px;background:var(--orange);color:var(--onorange);border:0;border-radius:16px;padding:15px 18px;cursor:pointer;width:100%}
+.btn.alt{background:transparent;color:var(--fg);border:2px solid var(--line)}
+.btn.ok{background:var(--green);color:#06210F}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 150px;min-width:0}
+.err{color:#D93F3F;font-size:14px;font-weight:600;min-height:20px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .err{color:#FF8A8A}}
+label.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--muted)}
+label.chk input{width:20px;height:20px;accent-color:var(--orange);margin-top:2px}
+.invite{background:var(--navy);color:#FFF6EC;border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:10px}
+.invite .big{font-size:26px;font-weight:800;line-height:1.2;text-wrap:balance}
+.invite .pill{align-self:flex-start;background:var(--orange);color:var(--navy);font-weight:800;border-radius:99px;padding:4px 12px;font-size:14px}
+.link{display:flex;gap:8px;align-items:center}
+.link code{flex:1;min-width:0;overflow-wrap:anywhere;background:var(--chip);border-radius:12px;padding:10px 12px;font-size:14px}
+.qr{width:200px;height:200px;margin:0 auto;background:#fff;border-radius:16px;padding:12px;border:1px solid var(--line)}
+.qr svg{width:100%;height:100%;display:block}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.who .btn{font-size:15px}
+.rcpt{display:flex;flex-direction:column;gap:8px;font-variant-numeric:tabular-nums}
+.rcpt div{display:flex;justify-content:space-between;gap:12px}
+.rcpt .tot{border-top:2px dashed var(--line);padding-top:8px;font-weight:800;font-size:18px}
+.good{color:var(--green)}
+.party{text-align:center}
+.party .em{width:92px;height:92px;border-radius:50%;background:var(--orange);display:grid;place-items:center;margin:0 auto 6px}
+.conf{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.conf i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:fall 2.2s ease-in forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.9}}
+@media (prefers-reduced-motion:reduce){.conf{display:none}}
+select,input[type=time]{font:inherit;color:var(--fg);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px 10px;width:100%;min-width:0}
+select:focus-visible,input[type=time]:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.when{display:grid;grid-template-columns:1fr 1.7fr 1.2fr;gap:8px}
+.invite .zn{font-size:14px;opacity:.85}
+.invite .cd{font-weight:800;color:var(--orange);font-size:15px}
+.f{display:flex;flex-direction:column;gap:6px}
+.f label{font-size:14px;font-weight:700}
+.f small{font-size:13px;color:var(--muted)}
+.pre{flex:none;display:grid;place-items:center;padding:0 12px;border:2px solid var(--line);border-radius:14px;font-weight:700;background:var(--chip)}
+.fr{display:flex;gap:8px}
+.clock{font-size:14px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+footer{font-size:12px;color:var(--muted)}
+.hhead{display:flex;align-items:center;gap:16px}
+.avatar{width:84px;height:84px;border-radius:50%;border:3px solid var(--orange);background:#6C4DFF;color:#FFF6EC;font:inherit;font-weight:800;font-size:30px;display:grid;place-items:center;overflow:hidden;padding:0;cursor:pointer;flex:none;position:relative}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar:focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+.chip{white-space:nowrap}
+.avlab{font-size:12px;color:var(--muted);margin-top:4px}
+.jlist{display:flex;flex-direction:column;gap:12px}
+.fr{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 8px;margin:0 -2px}
+.fr:empty{display:none}
+.fb{font:inherit;background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:68px;color:var(--fg)}
+.fb .fa{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:20px;color:var(--navy);border:3px solid transparent;box-shadow:0 0 0 2px var(--line)}
+.fb[aria-pressed="true"] .fa{box-shadow:0 0 0 3px var(--orange);border-color:var(--bg)}
+.fb.live .fa{box-shadow:0 0 0 2px var(--green)}
+.fb[aria-pressed="true"].live .fa{box-shadow:0 0 0 3px var(--orange)}
+.fb .fn{font-size:12px;font-weight:700;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb .fc{font-size:11px;color:var(--muted);margin-top:-4px}
+.fb:focus-visible{outline:3px solid var(--orange);outline-offset:2px;border-radius:12px}
+.ustat{font-size:13px;font-weight:700;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ustat.ok{color:var(--green)}.ustat.no{color:#D64545}
+.ustat button{font:inherit;font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:99px;padding:3px 10px;cursor:pointer}
+[hidden]{display:none!important}
+.chead{display:flex;align-items:center;gap:12px;min-width:0}
+.chead .fa{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:var(--navy);flex:none}
+.chlog{display:flex;flex-direction:column;gap:8px;max-height:48vh;min-height:160px;overflow-y:auto;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:18px}
+.bub{max-width:82%;padding:8px 12px;border-radius:16px;overflow-wrap:anywhere;line-height:1.35}
+.bub small{display:block;font-size:11px;opacity:.7;margin-top:2px}
+.bub.me{align-self:flex-end;background:var(--orange);color:var(--navy);border-bottom-right-radius:4px}
+.bub.th{align-self:flex-start;background:var(--chip);color:var(--fg);border-bottom-left-radius:4px}
+.sg{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 10px;min-width:0}
+.sg.now{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange) inset}
+.sg input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--orange)}
+.sg .st1{flex:1;min-width:0;font-weight:700;overflow-wrap:anywhere;line-height:1.25}
+.sg .st1 small{display:block;font-weight:600;font-size:12px;color:var(--muted)}
+.sg .chip{flex:none;padding:6px 12px}
+.player{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.player input[type=range]{width:100%;accent-color:var(--orange)}
+.pc{display:flex;gap:10px;justify-content:center;align-items:center}
+.pc .btn{width:auto;padding:10px 22px}
+.mini{display:flex;align-items:center;gap:10px;background:var(--navy);color:var(--cream);border-radius:16px;padding:8px 8px 8px 14px}
+.mini .mt{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0}
+.mini .btn{width:auto;padding:8px 16px}
+.fb .fa{position:relative}
+.bdg{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:99px;background:#D64545;color:#fff;font-style:normal;font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 5px;border:2px solid var(--bg)}
+.bub .rp{font:inherit;font-size:11px;background:none;border:0;padding:0;margin-left:8px;color:inherit;opacity:.65;text-decoration:underline;cursor:pointer}
+/* Yayın sürümü: yalnızca çekirdek. Mesajlaşma, Akış ve Yolda avukat görüşüne kadar kapalı (LAUNCH). */
+body.launch #msgJ,body.launch .den{display:none!important}
+.rpt{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.rpt label{display:flex;gap:10px;align-items:center;font-weight:600}
+.rpt input{width:20px;height:20px;accent-color:var(--orange);flex:none}
+.post{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ph{display:flex;align-items:center;gap:10px;min-width:0}
+.ph .fa2{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:var(--navy);flex:none}
+.ph .pt{min-width:0;flex:1}.ph .pt b{display:block;overflow-wrap:anywhere;line-height:1.2}.ph .pt small{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.tag2{font-size:11px;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--chip);color:var(--fg);white-space:nowrap}
+.tag2.ad{background:var(--navy);color:var(--cream)}
+.pm{display:grid;gap:4px;grid-template-columns:1fr 1fr;border-radius:14px;overflow:hidden}
+.pm.one{grid-template-columns:1fr}.pm img,.pm video{width:100%;height:100%;object-fit:cover;display:block;background:#000;aspect-ratio:4/3;max-height:260px}
+.pm.odd img:first-child{grid-column:1/-1}
+.pa{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cmp{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.cmp select,.cmp textarea{font:inherit;width:100%;border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--fg)}
+.den{display:flex;flex-direction:column;align-items:flex-start}
+.att{display:flex;gap:8px;flex-wrap:wrap}
+.bub img,.bub video{display:block;max-width:100%;max-height:220px;border-radius:12px;background:#000}
+.bub audio{display:block;width:100%;min-width:200px;max-width:100%}
+.bub .fcard{display:flex;gap:10px;align-items:center;min-width:0}
+.bub .fcard i{flex:none;width:36px;height:36px;border-radius:10px;background:var(--navy);color:var(--cream);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:11px}
+.bub .fcard b{display:block;overflow-wrap:anywhere;line-height:1.25}
+.chin{display:flex;gap:8px;align-items:center}.chin input{flex:1 1 auto;width:auto;min-width:0}.chin .btn{width:auto;flex:none;padding-inline:20px}
+.quick{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.quick .chip{flex:none}
+.jcard{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;min-width:0}
+.jimg{width:76px;height:76px;border-radius:16px;flex:none;display:grid;place-items:center}
+.jimg svg{width:70%;height:70%}
+.jcard .jt{font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.jcard .jm{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.jcard>div:last-child{min-width:0;display:flex;flex-direction:column;gap:3px}
+.jav{width:64px;height:64px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:22px;color:#0F1B3D;border:3px solid var(--orange);position:relative}
+.jbd{position:absolute;right:-8px;bottom:-8px;width:28px;height:28px;border-radius:50%;background:var(--cream);border:1px solid var(--line);display:grid;place-items:center}
+.jbd svg{width:66%;height:66%}
+.jcard.pas .jav{filter:grayscale(.75)}
+.jcard.pas{opacity:.75}
+.jcard.pas .jimg{filter:grayscale(.75)}
+.st{align-self:flex-start;font-size:12px;font-weight:800;border-radius:99px;padding:2px 10px;background:var(--chip);color:var(--fg)}
+.st.ok{background:var(--green);color:#06210F}
+.st.pr{background:var(--orange);color:var(--navy)}
+.st.gr{background:var(--line);color:var(--muted)}
+.ex{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.logo i.lg{background:#6C4DFF;border-radius:10px;width:36px;height:36px}
+.logo i.lg svg{width:82%;height:82%}
+.logo .wmk{font-family:'Baloo 2',var(--font);font-weight:800;font-size:30px;letter-spacing:.01em;line-height:1}
+#splash{position:fixed;inset:0;z-index:100;background:#6C4DFF;color:#FFF6EC;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;animation:splashOut .45s 2.3s forwards}
+#splash .mk{width:min(40vw,170px)}
+#splash .mk svg{width:100%;height:auto;display:block}
+#splash .wm{font-family:'Baloo 2',var(--font);font-weight:800;font-size:56px;line-height:1}
+#splash .tg{font-size:20px;font-weight:800;opacity:.95;letter-spacing:.01em}
+.slo{font-weight:800;font-size:15px;color:var(--orange);letter-spacing:.01em;margin:0}
+#splash .mk{animation:pop .7s cubic-bezier(.2,1.3,.4,1) both}
+#splash .wm{animation:rise .6s .35s ease-out both}
+#splash .tg{animation:rise .6s .65s ease-out both}
+@keyframes pop{from{transform:scale(.2) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes splashOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#splash .mk,#splash .wm,#splash .tg{animation:none}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="logo"><i class="lg"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(-3 0) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#FF7A1A"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#FF7A1A"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#FF7A1A"/></g><g transform="translate(103 0) scale(-1 1) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#C8F560"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#C8F560"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#C8F560"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#C8F560"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#C8F560"/></g><path d="M50 6V14M35 10L39 17M65 10L61 17" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/></svg></i><span class="wmk">jestora</span></div>
+    <span class="clock" id="clock" aria-label="Şu anki saat"></span><span class="demo">Demo</span>
+  </header>
+  <div class="steps" id="steps" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+
+  <!-- 7 ANA EKRAN -->
+  <section id="s7" hidden>
+    <div class="hhead">
+      <div>
+        <button class="avatar" id="avBtn" type="button" aria-label="Profil fotoğrafını seç"></button>
+        <div class="avlab">Fotoğraf ekle</div>
+      </div>
+      <div style="min-width:0">
+        <h1 id="hname" style="font-size:26px;overflow-wrap:anywhere"></h1>
+        <p class="sub" id="huser" style="font-weight:700"></p>
+        <p class="sub" id="hcount"></p>
+        <p class="slo" style="margin-top:2px">Bir jest yeter.</p>
+      </div>
+    </div>
+    <input type="file" id="avFile" accept="image/*" hidden>
+    <div class="fr" id="fr" role="group" aria-label="Jestleştiğin arkadaşlar"></div>
+    <button class="btn" id="newJ" type="button">Yeni jest daveti</button>
+    <button class="btn alt" id="msgJ" type="button" hidden>Mesaj yaz</button>
+    <div class="mini" id="mini" hidden><button class="mt" id="miniT" type="button" aria-label="Yolda ekranını aç"></button><button class="btn" id="miniP" type="button">Duraklat</button></div>
+    <div class="chips" role="group" aria-label="Jestler">
+      <button class="chip" id="tabA" type="button" aria-pressed="true">Aktif</button>
+      <button class="chip" id="tabP" type="button" aria-pressed="false">Pasif</button>
+    </div>
+    <div class="jlist" id="jlist"></div>
+    <div class="den"><button class="chip" id="denBtn" type="button" aria-expanded="false">Denemeler ▾</button>
+      <div id="denBox" hidden><p class="sub" style="font-size:13px;margin-bottom:8px">Pilotta test edilecek özellikler. Çekirdek akışın dışındadır.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="chip" id="feedBtn" type="button">Akış</button><button class="chip" id="roadBtn" type="button">Yolda: şarkılarım</button></div></div></div>
+    <div class="den"><button class="chip" id="fbBtn" type="button">Fikrini söyle</button>
+      <div class="cmp" id="fbBox" hidden style="margin-top:8px"><div style="font-weight:800">Jestora'yı nasıl buldun?</div>
+        <div class="chips" id="fbStars" role="radiogroup" aria-label="Puan"></div>
+        <textarea id="fbTxt" rows="2" maxlength="300" placeholder="Neyi sevdin, neyi karıştırdı?"></textarea>
+        <div style="display:flex;gap:8px"><button class="btn" id="fbGo" type="button" style="width:auto;padding:10px 22px">Gönder</button><button class="chip" id="fbNo" type="button">Vazgeç</button></div>
+        <p class="sub" id="fbDone" style="font-size:13px" hidden></p></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="sub note" style="font-size:13px">Örnek jestler gösterim içindir. Fotoğrafın kaydedilmez.</span><button class="chip" id="logout" type="button">Çıkış yap</button></div>
+  </section>
+
+  <!-- 0 HESAP -->
+  <section id="s0">
+    <p class="slo">Bir jest yeter.</p>
+    <h1 id="authTitle">Hesap oluştur</h1>
+    <p class="sub">Adın davetlerde görünür. Kullanıcı adın otomatik oluşur. Telefon numaran yalnızca hesabını doğrulamak içindir ve başkasına gösterilmez.</p>
+    <div class="chips">
+      <button class="chip" type="button" id="tabUp" aria-pressed="true">Kayıt ol</button>
+      <button class="chip" type="button" id="tabIn" aria-pressed="false">Giriş yap</button>
+    </div>
+    <form id="authForm" novalidate style="display:flex;flex-direction:column;gap:16px">
+      <div class="f" id="nameRow">
+        <label for="fn">Adın ve soyadın</label>
+        <input type="text" id="fn" maxlength="40" autocomplete="name" placeholder="örn. Ayşe Kaya" value="">
+        <small>Davetlerde ve ana ekranda bu görünür. Boşluk ve büyük harf kullanabilirsin.</small>
+      </div>
+      <div class="f" id="uRow">
+        <label for="u">Kullanıcı adı</label>
+        <input type="text" id="u" maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="örn. ayse.kaya" value="muhammetkamiloglu">
+        <small>Adından otomatik önerilir, istersen değiştir. Arkadaşların seni bununla bulur. 3-30 karakter: a-z, rakam, nokta, alt çizgi, tire. Türkçe harfler otomatik sadeleşir (ğ yerine g). Boşluk alt çizgiye dönüşür.</small>
+        <div id="ustat" class="ustat" aria-live="polite"></div>
+      </div>
+      <div class="f" id="phoneRow">
+        <label for="ph">Telefon numarası</label>
+        <div class="fr"><span class="pre">+90</span><input type="tel" id="ph" inputmode="numeric" autocomplete="tel-national" placeholder="5xx xxx xx xx"></div>
+      </div>
+      <div class="f" id="otpRow" hidden>
+        <label for="otp">SMS ile gelen 6 haneli kod</label>
+        <input type="text" id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="00000000" style="letter-spacing:.35em;font-size:22px;font-weight:800;text-align:center">
+        <small id="otpHint"></small>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="chip" id="otpResend" type="button" disabled>Tekrar gönder</button><button class="chip" id="otpChange" type="button">Numarayı değiştir</button></div>
+      </div>
+      <label class="chk" id="kvRow"><input type="checkbox" id="kv"> <span><a href="#" id="lgA">Aydınlatma metnini</a> ve <a href="#" id="lgT">Kullanım şartlarını</a> okudum. 18 yaşından büyüğüm.</span></label>
+      <div class="err" id="aerr" role="alert"></div>
+      <button class="btn" type="button" id="authGo">Kod gönder</button>
+    </form>
+    <div class="rpt" id="ageBox" hidden>
+      <h3 style="margin:0">Yaşını e-Devlet ile doğrula</h3>
+      <p class="sub" style="margin:0">Jestora 18 yaş ve üzeri içindir. e-Devlet yalnızca "18 yaşını doldurdu" bilgisini veren bir belirteç üretir. Kimlik numaran, adın ya da doğum tarihin Jestora'ya gelmez.</p>
+      <div class="err" id="ageErr" role="alert"></div>
+      <button class="btn" type="button" id="ageOk">e-Devlet'ten belirteç al (demo: 18+)</button>
+      <button class="chip" type="button" id="ageNo">Demo: 18 yaşından küçüğüm</button>
+      <small>Demo: gerçek e-Devlet bağlantısı yoktur. Gerçek sürümde belirteç Siber Güvenlik Başkanlığı rehberine göre alınır ve doğrulanır.</small>
+    </div>
+    <div class="rpt" id="legal" hidden role="dialog" aria-label="Metin">
+      <h3 id="lgH" style="margin:0"></h3>
+      <div id="lgB" style="display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.5"></div>
+      <small>Taslak metindir; yayından önce avukat onayı gerekir.</small>
+      <button class="btn" type="button" id="lgX">Kapat</button>
+    </div>
+    <footer>Demo: girdiğin bilgiler hiçbir yere kaydedilmez ya da gönderilmez. Şifre yok: telefona gelen tek kullanımlık kodla girilir. Demoda SMS gönderilmez, kod ekranda gösterilir.</footer>
+  </section>
+
+  <!-- 1 DAVET -->
+  <section id="s1">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span class="sub" id="hello"></span>
+      <button class="chip" id="toHome" type="button">← Ana ekran</button>
+    </div>
+    <h1>Hadi jestleşelim.</h1>
+    <p class="sub">Tanıdığın birini davet et. Sebebi sen seç, yeri sen seç.</p>
+    <div>
+      <h2>Kimleri davet ediyorsun?</h2>
+      <div class="chips" id="glist" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="who" maxlength="30" autocomplete="off" placeholder="Ad yaz, Ekle'ye bas" aria-label="Davet edilen kişinin adı">
+        <button class="chip" id="addG" type="button" style="flex:none">Ekle</button>
+      </div>
+      <p class="sub" style="font-size:13px;margin-top:6px">En fazla 6 kişi. Herkes ayrı yanıtlar, kabul edenlerle jest yapılır. Herkes kendi hesabını öder.</p>
+    </div>
+    <div>
+      <h2>Sebep</h2>
+      <div class="chips" id="reasons"></div>
+    </div>
+    <div>
+      <h2>Not (isteğe bağlı)</h2>
+      <textarea id="note" maxlength="140" placeholder="Seni çok özledim, bir kahve içelim."></textarea>
+      <div class="err" id="err" role="alert"></div>
+    </div>
+    <div>
+      <h2>Nerede?</h2>
+      <div class="chips" id="areas" style="margin-bottom:10px"></div>
+      <div style="display:flex;flex-direction:column;gap:10px" id="venues"></div>
+      <div class="card" id="custom" hidden style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0">Konum bul</h2>
+        <input type="text" id="place" maxlength="600" autocomplete="off" placeholder="Yer adı yaz veya Haritalar bağlantısını yapıştır" aria-label="Yer adı veya adres">
+        <a class="btn" id="findlink" href="#" target="_blank" rel="noopener" style="text-align:center;text-decoration:none;display:block">Konumu bul</a>
+        <p class="sub" style="font-size:13px">1) Konumu bul'a bas. 2) Haritada yeri seç. 3) Tarayıcı adres çubuğundaki uzun bağlantıyı kopyalayıp buraya yapıştır. Yer adı otomatik gelir. Üye olmayan yerde normal ödeme geçerli.</p>
+        <div class="card" id="picked" hidden></div>
+      </div>
+      <p style="margin-top:10px;font-size:14px"><a id="maplink" href="#" target="_blank" rel="noopener" style="color:var(--orange);font-weight:700">Haritada aç</a> <span class="sub">· Bu demoda konum, semt seçerek belirlenir.</span></p>
+    </div>
+    <div>
+      <h2>Ne zaman?</h2>
+      <div class="when">
+        <select id="dd" aria-label="Gün"></select>
+        <select id="mm" aria-label="Ay"></select>
+        <select id="yy" aria-label="Yıl"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(138px,auto) 1fr;gap:8px;margin-top:8px;align-items:start">
+        <input type="time" id="tt" value="15:00" aria-label="Saat">
+        <textarea id="tnote" maxlength="100" style="min-height:48px" placeholder="Zaman notu: örn. Kapıda buluşalım." aria-label="Karşı tarafa zaman notu"></textarea>
+      </div>
+      <div class="err" id="derr" role="alert"></div>
+      <p class="sub" style="font-size:13px">Davet kabul edilince karşı tarafa hatırlatma mesajı gider; notun da mesaja eklenir.</p>
+    </div>
+    <label class="chk"><input type="checkbox" id="age"> 18 yaşından büyüğüm.</label>
+    <button class="btn" id="make" disabled>Daveti hazırla</button>
+    <footer>Örnek mekanlar ve fiyatlar gösterim içindir. Jestora senin parana dokunmaz; ödeme mekanda yapılır.</footer>
+  </section>
+
+  <!-- 2 DAVET HAZIR -->
+  <section id="s2" hidden>
+    <h1>Davetin hazır.</h1>
+    <div class="invite" id="invCard"></div>
+    <div class="card" id="gstat"></div>
+    <div>
+      <h2>Linki gönder</h2>
+      <div class="link"><code id="lnk">jest.app/d/ayse-can-4k2</code><button class="chip" id="cp" style="flex:none">Kopyala</button></div>
+      <p class="sub" style="font-size:13px;margin-top:6px">Örnek bağlantı. Gerçek sürümde WhatsApp, mesaj veya sosyal medyadan paylaşılır.</p>
+    </div>
+    <div class="card">
+      <h2>Karşı tarafa giden hatırlatma</h2>
+      <p id="remMsg"></p>
+      <p class="sub" style="font-size:13px;margin-top:8px">Plan: davet kabul edilince, 1 gün önce ve 2 saat önce. Bu demoda mesaj gönderilmez, yalnızca önizleme gösterilir.</p>
+    </div>
+    <button class="btn" id="toReply">Demo: Can olarak yanıtla</button>
+    <button class="btn alt" id="back1">Daveti düzenle</button>
+    <button class="btn alt" id="toHome2" type="button">Ana ekrana dön</button>
+  </section>
+
+  <!-- 3 YANIT -->
+  <section id="s3" hidden>
+    <p class="sub" id="from"></p>
+    <div class="invite" id="invCard2"></div>
+    <div class="row" id="ansrow">
+      <button class="btn ok" id="yes">Kabul et</button>
+      <button class="btn alt" id="other">Başka zaman öner</button>
+    </div>
+    <div class="card" id="propose" hidden style="display:flex;flex-direction:column;gap:10px">
+      <h2 style="margin:0">Yeni tarih seç</h2>
+      <div class="when">
+        <select id="pd" aria-label="Önerilen gün"></select>
+        <select id="pm" aria-label="Önerilen ay"></select>
+        <select id="py" aria-label="Önerilen yıl"></select>
+      </div>
+      <input type="time" id="pt" aria-label="Önerilen saat">
+      <textarea id="pnote" maxlength="100" style="min-height:56px" placeholder="Not: örn. O gün işim var, akşam uygun mu?" aria-label="Davetliye not"></textarea>
+      <div class="err" id="perr" role="alert"></div>
+      <button class="btn" id="sendProp">Öneriyi gönder</button>
+    </div>
+    <p class="sub" id="otherNote"></p>
+    <button class="btn" id="toAyse" hidden>Demo: davetli olarak yanıtla</button>
+  </section>
+
+  <!-- 3b KARŞI ÖNERİ (AYŞE'NİN ONAYI) -->
+  <section id="s6" hidden>
+    <p class="sub" id="cFrom"></p>
+    <div class="invite" id="invCard3"></div>
+    <div class="row">
+      <button class="btn ok" id="okProp">Yeni zamanı onayla</button>
+      <button class="btn alt" id="noProp">Uygun değil</button>
+    </div>
+  </section>
+
+  <!-- 4 JEST ZAMANI -->
+  <section id="s4" hidden>
+    <h1>Jest zamanı.</h1>
+    <p class="sub" id="meetTxt"></p>
+    <div class="card">
+      <div class="qr" id="qr" aria-label="Örnek QR kod"></div>
+      <p class="sub" style="text-align:center;font-size:13px;margin-top:10px">Örnek QR. Mekan bunu okutur.</p>
+    </div>
+    <div>
+      <h2>Buluştuk mu? İki taraf da onaylar.</h2>
+      <div class="who">
+        <button class="btn alt" id="c1">Davet eden: Buluştuk</button>
+        <button class="btn alt" id="c2">Can: Buluştuk</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 JEST -->
+  <section id="s5" hidden>
+    <div class="party">
+      <div class="em"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#0F1B3D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></div>
+      <h1>Jest tamam.</h1>
+      <p class="sub" id="doneTxt"></p>
+    </div>
+    <div class="card rcpt" id="rcpt"></div>
+    <button class="btn" id="again">Yeni jest daveti</button>
+    <footer>Ödeme mekanda, kişilerin kendi arasında yapıldı. Jestora para tutmaz. Komisyon mekana aylık faturalanır. Rakamlar örnektir.</footer>
+  </section>
+
+  <!-- 8 MESAJ -->
+  <section id="s8" hidden>
+    <div class="chead">
+      <button class="chip" id="chBack" type="button">← Geri</button>
+      <div class="fa" id="chAv" aria-hidden="true"></div>
+      <div style="min-width:0"><div id="chName" style="font-weight:800;overflow-wrap:anywhere"></div><div class="sub" id="chSub" style="font-size:13px"></div></div>
+    </div>
+    <div class="chlog" id="chLog" aria-live="polite"></div>
+    <div class="rpt" id="rpt" hidden role="dialog" aria-label="Bildir">
+      <div style="font-weight:800" id="rptT">Neyi bildiriyorsun?</div>
+      <label><input type="radio" name="rr" value="Rahatsız edici mesaj" checked> Rahatsız edici mesaj</label>
+      <label><input type="radio" name="rr" value="Uygunsuz fotoğraf ya da video"> Uygunsuz fotoğraf ya da video</label>
+      <label><input type="radio" name="rr" value="Bahis ya da dolandırıcılık"> Bahis ya da dolandırıcılık</label>
+      <label><input type="radio" name="rr" value="Flört ya da cinsel içerik"> Flört ya da cinsel içerik</label>
+      <label><input type="radio" name="rr" value="18 yaşından küçük olabilir"> 18 yaşından küçük olabilir</label>
+      <label><input type="radio" name="rr" value="Diğer"> Diğer</label>
+      <label><input type="checkbox" id="rptB" checked> Bu kişiyi de engelle</label>
+      <div style="display:flex;gap:8px"><button class="btn" id="rptGo" type="button" style="width:auto;padding:10px 20px">Bildir</button><button class="chip" id="rptNo" type="button">Vazgeç</button></div>
+    </div>
+    <p class="sub" id="rptDone" hidden></p>
+    <div class="att" id="chAtt" role="group" aria-label="Paylaş">
+      <button class="chip" type="button" data-k="image">Fotoğraf</button>
+      <button class="chip" type="button" data-k="video">Video</button>
+      <button class="chip" type="button" data-k="audio">Ses</button>
+    </div>
+    <input type="file" id="chFile" hidden>
+    <div class="quick" id="chQ"></div>
+    <div class="err" id="chErr" role="alert"></div>
+    <div class="chin" id="chBox"><input type="text" id="chIn" maxlength="300" autocomplete="off" placeholder="Mesaj yaz"><button class="btn" id="chSend" type="button">Gönder</button></div>
+    <p class="sub" id="chBlocked" hidden>Bu kişiyi engelledin. Birbirinize mesaj yazamazsınız.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="chip" id="chJest" type="button">Jest daveti gönder</button>
+      <button class="chip" id="chBlock" type="button">Engelle</button>
+      <button class="chip" id="chRep" type="button">Bildir</button>
+    </div>
+    <footer>Mesajlaşma yalnızca birlikte jest yaptığın kişilerle açılır. Demo: cevaplar örnektir, hiçbir yere gönderilmez. Bahis, flört ve ceza içeren mesajlar yazılamaz. Fotoğraf, video ve ses paylaşılabilir, sınır 25 MB.</footer>
+  </section>
+
+  <!-- 9 YOLDA -->
+  <section id="s9" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><button class="chip" id="rdBack" type="button">← Ana ekran</button><span class="pill-demo sub" style="font-size:13px" id="rdCount"></span></div>
+    <h1>Yolda.</h1>
+    <p class="sub">Otobüste, tramvayda, vapurda yolun uzun olsun, şarkıların yanında gitsin. Kendi şarkı dosyalarını ekle, sırayla ya da seçtiklerin çalsın.</p>
+    <div class="player">
+      <div id="rdNow" style="font-weight:800;overflow-wrap:anywhere">Çalan şarkı yok</div>
+      <input type="range" id="rdSeek" min="0" max="100" value="0" step="0.1" aria-label="Şarkıda ilerle">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span id="rdT">0:00</span><span id="rdD">0:00</span></div>
+      <div class="pc"><button class="chip" id="rdPrev" type="button">Önceki</button><button class="btn" id="rdPlay" type="button">Çal</button><button class="chip" id="rdNext" type="button">Sonraki</button></div>
+      <div class="chips" role="group" aria-label="Çalma düzeni"><button class="chip" id="rdShuf" type="button" aria-pressed="false">Karışık</button><button class="chip" id="rdRep" type="button" aria-pressed="false">Tekrar</button></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn" id="rdAdd" type="button" style="width:auto;flex:1 1 auto;white-space:nowrap">Şarkı ekle</button>
+      <button class="chip" id="rdDemo" type="button">Deneme sesi</button>
+      <button class="chip" id="rdAll" type="button">Hepsini seç</button>
+    </div>
+    <input type="file" id="rdFile" accept="audio/*" multiple hidden>
+    <div class="err" id="rdErr" role="alert"></div>
+    <p class="sub" style="font-size:13px" id="rdHint">Kutuları işaretlersen sadece seçtiklerin çalar. Hiçbiri seçili değilse hepsi sırayla çalar.</p>
+    <div id="rdList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <footer>Jestora şarkı sunmaz ve saklamaz. Şarkılar senin telefonundaki kendi dosyalarındır, kimseye gönderilmez. Demo: şarkılar yalnızca bu sayfa açıkken durur. Telefon kilit ekranından kontrol desteklenir. Gerçek uygulamada şarkılar cihazda kalıcı saklanır ve ekran kapalıyken kesintisiz çalar.</footer>
+  </section>
+
+  <!-- 10 AKIŞ -->
+  <section id="s10" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><button class="chip" id="fdBack" type="button">← Ana ekran</button></div>
+    <h1>Akış.</h1>
+    <p class="sub">Jestlilerin buluştuğu yerlerden anılar ve üye mekanların tanıtımları. Yolda göz at.</p>
+    <div class="chips" role="group" aria-label="Akış türü"><button class="chip" id="fdA" type="button" aria-pressed="true">Jest anıları</button><button class="chip" id="fdM" type="button" aria-pressed="false">Mekanlar</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="fdNew" type="button" style="width:auto;flex:1 1 auto">Anı paylaş</button><button class="chip" id="fdVenue" type="button">Mekan tanıtımı ekle (demo)</button></div>
+    <div class="cmp" id="cmp" hidden>
+      <div style="font-weight:800" id="cmT"></div>
+      <div id="cmJw"><label for="cmJ" class="sub" style="font-size:13px">Hangi jest?</label><select id="cmJ"></select></div>
+      <div id="cmVw" hidden><label for="cmV" class="sub" style="font-size:13px">Hangi mekan?</label><select id="cmV"></select></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="chip" id="cmImg" type="button">Fotoğraf ekle</button><button class="chip" id="cmVid" type="button">Video ekle</button><button class="chip" id="cmClr" type="button">Temizle</button></div>
+      <input type="file" id="cmFi" accept="image/*" multiple hidden><input type="file" id="cmFv" accept="video/*" hidden>
+      <div class="sub" id="cmInfo" style="font-size:13px"></div>
+      <textarea id="cmCap" maxlength="140" rows="2" placeholder="Bir cümle yaz (isteğe bağlı)"></textarea>
+      <div class="err" id="cmErr" role="alert"></div>
+      <p class="sub" style="font-size:12px" id="cmRule"></p>
+      <div style="display:flex;gap:8px"><button class="btn" id="cmGo" type="button" style="width:auto;padding:10px 22px">Paylaş</button><button class="chip" id="cmNo" type="button">Vazgeç</button></div>
+    </div>
+    <div id="fdList" style="display:flex;flex-direction:column;gap:12px"></div>
+    <footer>Anılar yalnızca iki tarafın QR ile onayladığı, tamamlanmış jestler için paylaşılır. Gönderiyi sadece jestlilerin görür. Fotoğrafta yer alan kişi gönderinin kaldırılmasını isteyebilir. "Tanıtım" etiketli içerikler üye işletmelerin reklamıdır. Demo: örnek görseller çizimdir, hiçbir şey kaydedilmez ya da gönderilmez.</footer>
+  </section>
+
+
+
+</div>
+<div class="conf" id="conf" aria-hidden="true"></div>
+<div id="splash" role="img" aria-label="Jestora, Bir jest yeter"><div class="mk"><svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(-3 0) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#FF7A1A"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#FF7A1A"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#FF7A1A"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#FF7A1A"/></g><g transform="translate(103 0) scale(-1 1) rotate(14 37 60)"><rect x="24" y="44" width="27" height="36" rx="13" fill="#C8F560"/><rect x="24" y="22" width="8" height="34" rx="4" fill="#C8F560"/><rect x="33.5" y="14" width="8" height="42" rx="4" fill="#C8F560"/><rect x="43" y="22" width="8" height="34" rx="4" fill="#C8F560"/><ellipse cx="21" cy="66" rx="6.5" ry="10" transform="rotate(-28 21 66)" fill="#C8F560"/></g><path d="M50 6V14M35 10L39 17M65 10L61 17" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/></svg></div><div class="wm">jestora</div><div class="tg">Bir jest yeter.</div></div>
+
+<script>
+const REASONS=['Özledim','Kutlama','Teşekkür','Geçmiş olsun','Barışma','İş görüşmesi','Sohbet','Hedef','Diğer'];
+const REX={'Özledim':'Seni çok özledim, bir kahve içelim.','Kutlama':'Tebrikler, bunu birlikte kutlayalım.','Teşekkür':'Yardımın için teşekkür etmek istiyorum.','Geçmiş olsun':'Geçmiş olsun, nasılsın? Bir çay içelim.','Barışma':'Seninle konuşmak istiyorum, buluşalım mı?','İş görüşmesi':'İş fikrini yüz yüze konuşalım.','Sohbet':'Uzun zamandır konuşamadık, gel sohbet edelim.','Hedef':'Birlikte hedeflerimize bakalım.','Diğer':'Buluşmak için kısa bir not yaz.'};
+const VENUES=[
+ {id:'a',area:'Kadıköy',name:'Kadıköy Kahve Atölyesi',meta:'Örnek üye mekan · Kadıköy',normal:100,jest:80,fee:8},
+ {id:'b',area:'Kadıköy',name:'Moda Fırın',meta:'Örnek üye mekan · Moda',normal:150,jest:120,fee:12},
+ {id:'d',area:'Beşiktaş',name:'Çarşı Kahvecisi',meta:'Örnek üye mekan · Beşiktaş',normal:90,jest:72,fee:7},
+ {id:'e',area:'Üsküdar',name:'Sahil Kafe',meta:'Örnek üye mekan · Üsküdar',normal:110,jest:88,fee:9},
+ {id:'c',area:'*',name:'Başka bir yer',meta:'Üye değil · normal ödeme, Jestora indirimi yok',normal:0,jest:0,fee:0}
+];
+const MONTHS=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const DAYS=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+const pad=n=>String(n).padStart(2,'0');
+
+var IC={
+ 'Özledim':{bg:'#FF4F9A',fg:'#FFF6EC',p:'<path d="M50 80C18 58 20 28 40 26C46 25 50 29 50 35C50 29 54 25 60 26C80 28 82 58 50 80Z" fill="#FFF6EC"/>'},
+ 'Kutlama':{bg:'#FF7A1A',fg:'#0F1B3D',p:'<path d="M22 82L38 42L60 64Z" fill="#0F1B3D"/><circle cx="62" cy="34" r="6" fill="#FFF6EC"/><circle cx="78" cy="52" r="5" fill="#C8F560"/><circle cx="50" cy="22" r="4.5" fill="#6C4DFF"/><path d="M66 70L82 78M70 26L84 20" stroke="#FFF6EC" stroke-width="5" stroke-linecap="round"/>'},
+ 'Teşekkür':{bg:'#2BB673',fg:'#0F1B3D',p:'<rect x="22" y="46" width="56" height="34" rx="6" fill="#FFF6EC"/><rect x="16" y="34" width="68" height="16" rx="6" fill="#0F1B3D"/><rect x="46" y="34" width="8" height="46" fill="#FF7A1A"/><path d="M50 34C46 20 30 16 32 28C33 33 42 34 50 34Z M50 34C54 20 70 16 68 28C67 33 58 34 50 34Z" fill="#FF7A1A"/>'},
+ 'İş görüşmesi':{bg:'#6C4DFF',fg:'#FFF6EC',p:'<rect x="16" y="36" width="68" height="44" rx="9" fill="#FFF6EC"/><path d="M38 36V28A6 6 0 0 1 44 22H56A6 6 0 0 1 62 28V36" fill="none" stroke="#FFF6EC" stroke-width="6"/><rect x="16" y="54" width="68" height="6" fill="#6C4DFF"/><rect x="44" y="50" width="12" height="14" rx="3" fill="#FF7A1A"/>'},
+ 'Sohbet':{bg:'#0F1B3D',fg:'#FFF6EC',p:'<rect x="10" y="16" width="50" height="36" rx="17" fill="#FF7A1A"/><path d="M20 50L16 68L36 52Z" fill="#FF7A1A"/><rect x="40" y="42" width="50" height="36" rx="17" fill="#FFF6EC"/><path d="M80 76L86 92L66 78Z" fill="#FFF6EC"/>'},
+ 'Geçmiş olsun':{bg:'#2BB673',fg:'#0F1B3D',p:'<circle cx="50" cy="50" r="12" fill="#FFC857"/><circle cx="50" cy="26" r="13" fill="#FFF6EC"/><circle cx="74" cy="50" r="13" fill="#FFF6EC"/><circle cx="50" cy="74" r="13" fill="#FFF6EC"/><circle cx="26" cy="50" r="13" fill="#FFF6EC"/><circle cx="50" cy="50" r="11" fill="#FFC857"/>'},
+ 'Barışma':{bg:'#6C4DFF',fg:'#FFF6EC',p:'<circle cx="38" cy="50" r="24" fill="#FF7A1A"/><circle cx="62" cy="50" r="24" fill="#C8F560" fill-opacity=".9"/><path d="M44 50L50 56L58 44" fill="none" stroke="#0F1B3D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'},
+ 'Hedef':{bg:'#C8F560',fg:'#0F1B3D',p:'<path d="M30 84V18" stroke="#0F1B3D" stroke-width="8" stroke-linecap="round"/><path d="M34 22H78L66 40L78 58H34Z" fill="#FF7A1A"/>'},
+ '_':{bg:'#FF7A1A',fg:'#0F1B3D',p:'<path d="M22 46H66V60A18 18 0 0 1 48 78H40A18 18 0 0 1 22 60Z" fill="#0F1B3D"/><path d="M66 50H72A8 8 0 0 1 72 66H64" fill="none" stroke="#0F1B3D" stroke-width="6"/><path d="M44 38C36 30 32 24 38 20C41 18 44 20 44 23C44 20 47 18 50 20C56 24 52 30 44 38Z" fill="#FFF6EC"/>'}
+};
+var JESTS=[
+ {names:['Elif'],reason:'Özledim',place:'Moda Fırın',when:'31 Ekim · 15:00',status:'Kabul edildi',active:true,sample:true},
+ {names:['Mert','Zeynep'],reason:'Kutlama',place:'Sahil Kafe',when:'2 Kasım · 18:00',status:'Bekliyor',active:true,sample:true},
+ {names:['Deniz'],reason:'Teşekkür',place:'Kadıköy Kahve Atölyesi',when:'12 Ekim · 17:30',status:'Tamamlandı',active:false,sample:true},
+ {names:['Cem'],reason:'İş görüşmesi',place:'Çarşı Kahvecisi',when:'5 Ekim · 11:00',status:'İptal edildi',active:false,sample:true},
+ {names:['Selin'],reason:'Sohbet',place:'Moda Fırın',when:'28 Eylül · 16:00',status:'Yanıt gelmedi',active:false,sample:true}
+];
+var homeTab='a';
+function stCls(t){return t==='Kabul edildi'||t==='Tamamlandı'?'ok':(t==='Zaman önerildi'?'pr':(t==='Bekliyor'?'':'gr'))}
+function setJ(st,done){var j=S.curJ;if(!j)return;j.status=st;j.when=when();if(done)j.active=false}
+function saveJest(){
+  var d={names:guestNames(),reason:S.reason,place:vname(),when:when(),status:'Bekliyor',active:true};
+  if(S.curJ&&JESTS.indexOf(S.curJ)>-1&&S.curJ.active){Object.assign(S.curJ,d)}else{S.curJ=d;JESTS.unshift(d)}
+}
+function renderAvatar(){
+  var b=$('avBtn');b.innerHTML='';
+  if(S.avatar){var im=document.createElement('img');im.src=S.avatar;im.alt='Profil fotoğrafın';b.appendChild(im)}
+  else{b.textContent=((S.name?S.name.split(' ').slice(0,2).map(function(w){return w.charAt(0)}).join(''):(S.user||'J')).replace(/[^\p{L}]/gu,'').slice(0,2)||'J').toLocaleUpperCase('tr')}
+}
+var selF='';
+var FCOL=['#FFB27A','#C8F560','#FF9FC8','#B7A6FF','#8FE3B8','#FFD66B'];
+function fcol(n){var h=0;for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))>>>0;return FCOL[h%FCOL.length]}
+function renderFriends(){
+  var box=$('fr');box.innerHTML='';var m={},order=[];
+  JESTS.forEach(function(j){j.names.forEach(function(n){if(!m[n]){m[n]={n:n,c:0,live:false};order.push(n)}m[n].c++;if(j.active)m[n].live=true})});
+  if(selF&&!m[selF])selF='';
+  order.filter(function(n){return !/^Davetli \(/.test(n)}).forEach(function(n){
+    var f=m[n],b=document.createElement('button');b.type='button';b.className='fb'+(f.live?' live':'');
+    b.setAttribute('aria-pressed',String(selF===n));
+    b.innerHTML='<div class="fa"></div><div class="fn"></div><div class="fc"></div>';
+    var fa=b.querySelector('.fa');fa.style.background=fcol(n);fa.textContent=(n.replace(/[^\p{L}]/gu,'').slice(0,2)||'?').toLocaleUpperCase('tr');if(UNR[n]){var bg=document.createElement('i');bg.className='bdg';bg.textContent=UNR[n];bg.setAttribute('aria-label',UNR[n]+' okunmamış mesaj');fa.appendChild(bg)}
+    b.querySelector('.fn').textContent=n;b.querySelector('.fc').textContent=f.c+' jest';
+    b.onclick=function(){selF=selF===n?'':n;renderHome()};
+    box.appendChild(b);
+  });
+  $('newJ').textContent=selF?selF+' ile yeni jest daveti':'Yeni jest daveti';
+  $('msgJ').hidden=!selF;if(selF)$('msgJ').textContent=selF+' ile mesajlaş';
+}
+var BADEXT=/\.(exe|apk|bat|cmd|msi|scr|js|jar|sh|vbs|com|dll|ps1)$/i;
+function fsz(n){return n>=1048576?(n/1048576).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(n/1024))+' KB'}
+function fileCard(m){var d=document.createElement('div');d.className='fcard';var ext=((m.name.match(/\.([^.]+)$/)||[])[1]||'dosya').slice(0,4).toUpperCase();
+  d.innerHTML='<i></i><div style="min-width:0"><b></b><span style="font-size:12px;opacity:.75"></span></div>';d.querySelector('i').textContent=ext;d.querySelector('b').textContent=m.name;d.querySelector('span').textContent=fsz(m.size)+(m.kind==='video'||m.kind==='audio'||m.kind==='image'?' · önizleme yok':'');return d}
+function msgBody(m){
+  if(!m.kind||m.kind==='text'){var t=document.createElement('span');t.textContent=m.t;return t}
+  var el;
+  if(m.kind==='image'){el=document.createElement('img');el.alt=m.name;el.src=m.url}
+  else if(m.kind==='video'){el=document.createElement('video');el.controls=true;el.preload='metadata';el.src=m.url}
+  else if(m.kind==='audio'){el=document.createElement('audio');el.controls=true;el.src=m.url}
+  else return fileCard(m);
+  el.onerror=function(){if(el.parentNode)el.parentNode.replaceChild(fileCard(m),el)};
+  var w=document.createElement('div');w.appendChild(el);var c=document.createElement('div');c.style.cssText='font-size:12px;opacity:.75;margin-top:4px;overflow-wrap:anywhere';c.textContent=m.name+' · '+fsz(m.size);w.appendChild(c);return w}
+var attK='file';
+function sendFile(f){
+  var n=S.cn;if(!f||BLK[n])return;
+  if(BADEXT.test(f.name)){$('chErr').textContent='Bu dosya türü gönderilemez (çalıştırılabilir dosyalar yasak).';return}
+  if(f.size>26214400){$('chErr').textContent='Dosya en fazla 25 MB olabilir (bu '+fsz(f.size)+').';return}
+  var k=attK;if(k==='file'){k=/^image\//.test(f.type)?'image':/^video\//.test(f.type)?'video':/^audio\//.test(f.type)?'audio':'file'}
+  if(k==='image'&&!/^image\//.test(f.type)){$('chErr').textContent='Lütfen bir fotoğraf seç.';return}
+  if(k==='video'&&!/^video\//.test(f.type)){$('chErr').textContent='Lütfen bir video seç.';return}
+  if(k==='audio'&&!/^audio\//.test(f.type)){$('chErr').textContent='Lütfen bir ses dosyası seç.';return}
+  $('chErr').textContent='';
+  (CHAT[n]=CHAT[n]||[]).push({me:true,kind:k,url:URL.createObjectURL(f),name:f.name,size:f.size,h:hhmm()});renderChat();
+  setTimeout(function(){if(BLK[n])return;(CHAT[n]=CHAT[n]||[]).push({me:false,t:'Aldım, teşekkürler.',h:hhmm()});if(S.cn===n&&!$('s8').hidden)renderChat();else{UNR[n]=(UNR[n]||0)+1;if(!$('s7').hidden)renderFriends()}},900);
+}
+var UNR={'Mert':1};
+var CHAT={'Elif':[{me:false,t:'Cumartesi görüşelim mi?',h:'10:12'}],'Mert':[{me:false,t:'Kutlama için yer baktım.',h:'dün'}]};
+var BLK={};var RP=['Tamamdır!','Süper, haberleşelim.','Olur, görüşürüz.','Harika, teşekkürler.'];var rpi=0;
+function hhmm(){var d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())}
+function chatHdr(n){var fa=$('chAv');fa.style.background=fcol(n);fa.textContent=(n.replace(/[^\p{L}]/gu,'').slice(0,2)||'?').toLocaleUpperCase('tr');
+  var c=JESTS.filter(function(j){return j.names.indexOf(n)>-1}).length;$('chName').textContent=n;$('chSub').textContent='Birlikte '+c+' jest yaptınız'}
+function renderChat(){
+  var n=S.cn,log=$('chLog');log.innerHTML='';
+  (CHAT[n]||[]).forEach(function(m){var b=document.createElement('div');b.className='bub '+(m.me?'me':'th');b.appendChild(msgBody(m));var sm=document.createElement('small');sm.textContent=m.h;if(!m.me){var rb=document.createElement('button');rb.type='button';rb.className='rp';rb.textContent='Bildir';rb.onclick=function(){openRpt(m)};sm.appendChild(rb)}b.appendChild(sm);log.appendChild(b)});
+  if(!(CHAT[n]||[]).length){var e=document.createElement('p');e.className='sub';e.textContent='Henüz mesaj yok. Bir şey yaz ya da hızlı yanıt seç.';log.appendChild(e)}
+  log.scrollTop=log.scrollHeight;
+  var bl=!!BLK[n];$('chBox').hidden=bl;$('chQ').hidden=bl;$('chAtt').hidden=bl;$('chBlocked').hidden=!bl;$('chBlock').textContent=bl?'Engeli kaldır':'Engelle';
+}
+function openChat(n){S.cn=n;UNR[n]=0;$('rpt').hidden=true;$('rptDone').hidden=true;chatHdr(n);$('chErr').textContent='';$('chIn').value='';
+  var q=$('chQ');q.innerHTML='';['Geliyorum','10 dk geç kalıyorum','Neredesin?','Teşekkürler'].forEach(function(t){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;b.onclick=function(){sendMsg(t)};q.appendChild(b)});
+  renderChat();go(8)}
+function sendMsg(t){
+  t=(t||'').trim();var n=S.cn;if(!t||BLK[n])return;
+  var w=modHard(t);
+  if(w){$('chErr').textContent='"'+w+'" Jestora’da yasak: bahis içeren mesaj gönderilemez.';return}
+  var sw=modSoft(t);if(sw&&SOFTOK!==t){SOFTOK=t;$('chErr').textContent=SOFTMSG(sw);return}
+  $('chErr').textContent='';(CHAT[n]=CHAT[n]||[]).push({me:true,t:t,h:hhmm()});$('chIn').value='';renderChat();
+  setTimeout(function(){if(BLK[n])return;(CHAT[n]=CHAT[n]||[]).push({me:false,t:RP[rpi++%RP.length],h:hhmm()});if(S.cn===n&&!$('s8').hidden)renderChat();else{UNR[n]=(UNR[n]||0)+1;if(!$('s7').hidden)renderFriends()}},900);
+}
+var RCTX=null;
+function openRpt(m){RCTX=m||null;$('rptT').textContent=m?'Bu mesajı bildiriyorsun':'Bu kişiyi bildiriyorsun';$('rptDone').hidden=true;$('rpt').hidden=false;$('rpt').scrollIntoView({block:'nearest'})}
+function chatInit(){
+  $('chRep').onclick=function(){openRpt(null)};$('rptNo').onclick=function(){$('rpt').hidden=true};
+  $('rptGo').onclick=function(){var r=document.querySelector('input[name=rr]:checked').value;$('rpt').hidden=true;
+    if($('rptB').checked){BLK[S.cn]=true;renderChat()}
+    var d=$('rptDone');d.hidden=false;d.textContent='Bildirimin alındı ('+r+'). Ekibimiz inceler.'+($('rptB').checked?' '+S.cn+' engellendi.':'')+' Demoda bildirim hiçbir yere gönderilmez.'};
+  $('msgJ').onclick=function(){if(selF)openChat(selF)};
+  $('chAtt').onclick=function(e){var b=e.target.closest('[data-k]');if(!b||BLK[S.cn])return;attK=b.getAttribute('data-k');var fi=$('chFile');fi.value='';fi.accept=attK==='image'?'image/*':attK==='video'?'video/*':attK==='audio'?'audio/*':'';fi.click()};
+  $('chFile').onchange=function(){sendFile(this.files&&this.files[0])};
+  $('chBack').onclick=function(){renderHome();go(7)};
+  $('chSend').onclick=function(){sendMsg($('chIn').value)};
+  $('chIn').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();sendMsg($('chIn').value)}};
+  $('chBlock').onclick=function(){BLK[S.cn]=!BLK[S.cn];renderChat()};
+  $('chJest').onclick=function(){S.curJ=null;S.guests=[S.cn];$('who').value='';renderG();check();go(1)};
+}
+var SONGS=[],NOW=null,MAXS=15,SHUF=false,REP=false,AU=new Audio();AU.preload='auto';
+function mmss(t){t=isFinite(t)?Math.floor(t):0;return Math.floor(t/60)+':'+pad(t%60)}
+function sname(n){return n.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').trim()||n}
+function queue(){var q=SONGS.filter(function(x){return x.sel});return q.length?q:SONGS}
+function playSong(x){if(!x)return;NOW=x;AU.src=x.url;AU.play().catch(function(){});
+  try{if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:x.name,artist:'Jestora · Yolda'});navigator.mediaSession.setActionHandler('play',function(){AU.play()});navigator.mediaSession.setActionHandler('pause',function(){AU.pause()});navigator.mediaSession.setActionHandler('nexttrack',function(){nextSong(false)});navigator.mediaSession.setActionHandler('previoustrack',prevSong)}}catch(e){}
+  drawRoad()}
+function nextSong(auto){
+  var q=queue();if(!q.length)return;
+  if(auto&&REP&&NOW&&q.length===1){AU.currentTime=0;AU.play().catch(function(){});return}
+  var i=q.indexOf(NOW);var n;
+  if(SHUF&&q.length>1){do{n=q[Math.floor(Math.random()*q.length)]}while(n===NOW)}
+  else{i=i+1;if(i>=q.length){if(auto&&!REP){AU.pause();drawRoad();return}i=0}n=q[i]}
+  playSong(n)}
+function prevSong(){var q=queue();if(!q.length)return;if(AU.currentTime>3){AU.currentTime=0;return}var i=q.indexOf(NOW);playSong(q[i<=0?q.length-1:i-1])}
+function togglePlay(){if(!NOW){var q=queue();if(q.length)playSong(q[0]);return}if(AU.paused)AU.play().catch(function(){});else AU.pause();drawRoad()}
+function addFiles(files){
+  var err='';
+  Array.prototype.forEach.call(files,function(f){
+    if(SONGS.length>=MAXS){err='En fazla '+MAXS+' şarkı ekleyebilirsin.';return}
+    if(!/^audio\//.test(f.type)&&!/\.(mp3|m4a|aac|wav|ogg|flac|opus)$/i.test(f.name)){err='"'+f.name+'" bir ses dosyası değil.';return}
+    if(f.size>26214400){err='"'+f.name+'" 25 MB sınırını aşıyor.';return}
+    SONGS.push({name:sname(f.name),url:URL.createObjectURL(f),size:f.size,sel:false})});
+  $('rdErr').textContent=err;drawRoad()}
+function demoTone(){
+  var sr=8000,notes=[262,294,330,349,392,349,330,294],n=sr*0.35,d=new Int16Array(n*notes.length);
+  notes.forEach(function(f,k){for(var i=0;i<n;i++){var e=Math.min(1,i/200)*Math.min(1,(n-i)/400);d[k*n+i]=Math.round(9000*e*Math.sin(2*Math.PI*f*i/sr))}});
+  var b=new ArrayBuffer(44+d.length*2),v=new DataView(b);function w(o,t){for(var i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))}
+  w(0,'RIFF');v.setUint32(4,36+d.length*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,d.length*2,true);
+  for(var i=0;i<d.length;i++)v.setInt16(44+i*2,d[i],true);
+  if(SONGS.length>=MAXS){$('rdErr').textContent='En fazla '+MAXS+' şarkı ekleyebilirsin.';return}
+  SONGS.push({name:'Deneme sesi '+(SONGS.length+1),url:URL.createObjectURL(new Blob([b],{type:'audio/wav'})),size:b.byteLength,sel:false,demo:true});drawRoad()}
+function drawRoad(){
+  var playing=NOW&&!AU.paused;
+  $('rdCount').textContent=SONGS.length+' / '+MAXS+' şarkı';
+  $('rdNow').textContent=NOW?(playing?'Çalıyor: ':'Duraklatıldı: ')+NOW.name:'Çalan şarkı yok';
+  $('rdPlay').textContent=playing?'Duraklat':'Çal';
+  $('rdShuf').setAttribute('aria-pressed',String(SHUF));$('rdRep').setAttribute('aria-pressed',String(REP));
+  var allSel=SONGS.length&&SONGS.every(function(x){return x.sel});$('rdAll').textContent=allSel?'Seçimi kaldır':'Hepsini seç';
+  var box=$('rdList');box.innerHTML='';
+  if(!SONGS.length){var e=document.createElement('p');e.className='sub';e.textContent='Henüz şarkı yok. "Şarkı ekle" ile telefonundaki şarkıları seç ya da "Deneme sesi" ile dene.';box.appendChild(e)}
+  SONGS.forEach(function(x,i){
+    var r=document.createElement('div');r.className='sg'+(x===NOW?' now':'');
+    r.innerHTML='<input type="checkbox" aria-label="Seç"><div class="st1"></div><button class="chip" type="button" data-a="p"></button><button class="chip" type="button" data-a="d" aria-label="Sil">Sil</button>';
+    var cb=r.querySelector('input');cb.checked=x.sel;cb.onchange=function(){x.sel=cb.checked;drawRoad()};
+    var st=r.querySelector('.st1');st.textContent=(i+1)+'. '+x.name;var sm=document.createElement('small');sm.textContent=fsz(x.size)+(x.demo?' · deneme sesi':'');st.appendChild(sm);
+    var pb=r.querySelector('[data-a=p]');pb.textContent=(x===NOW&&playing)?'Duraklat':'Çal';pb.onclick=function(){if(x===NOW)togglePlay();else playSong(x)};
+    r.querySelector('[data-a=d]').onclick=function(){var was=x===NOW;if(was){AU.pause();AU.removeAttribute('src');NOW=null}URL.revokeObjectURL(x.url);SONGS.splice(SONGS.indexOf(x),1);drawRoad()};
+    box.appendChild(r)});
+  $('roadBtn').textContent='Yolda: şarkılarım'+(SONGS.length?' ('+SONGS.length+')':'');
+  $('mini').hidden=!NOW;if(NOW){$('miniT').textContent=(playing?'♪ ':'⏸ ')+NOW.name;$('miniP').textContent=playing?'Duraklat':'Çal'}
+}
+var LAUNCH=true;try{document.body.classList.toggle('launch',LAUNCH)}catch(e){}
+function denInit(){
+  $('denBtn').onclick=function(){var o=$('denBox').hidden;$('denBox').hidden=!o;$('denBtn').setAttribute('aria-expanded',String(o));$('denBtn').textContent=o?'Denemeler ▴':'Denemeler ▾'};
+  var st=0,box=$('fbStars');for(var i=1;i<=5;i++){(function(i){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=i+' ★';b.setAttribute('aria-pressed','false');b.onclick=function(){st=i;Array.prototype.forEach.call(box.children,function(c,k){c.setAttribute('aria-pressed',String(k+1===i))})};box.appendChild(b)})(i)}
+  $('fbBtn').onclick=function(){$('fbBox').hidden=!$('fbBox').hidden;$('fbDone').hidden=true};$('fbNo').onclick=function(){$('fbBox').hidden=true};
+  $('fbGo').onclick=function(){if(!st){$('fbDone').hidden=false;$('fbDone').textContent='Önce yıldız seç.';return}$('fbDone').hidden=false;$('fbDone').textContent='Teşekkürler ('+st+' yıldız). Demoda gönderilmez, gerçek sürümde ekibe ulaşır.';$('fbTxt').value=''}}
+function roadInit(){
+  AU.onended=function(){nextSong(true)};AU.onplay=AU.onpause=drawRoad;
+  AU.ontimeupdate=function(){var d=AU.duration;$('rdT').textContent=mmss(AU.currentTime);$('rdD').textContent=mmss(d);$('rdSeek').value=d?(AU.currentTime/d*100):0};
+  $('rdSeek').oninput=function(){if(AU.duration)AU.currentTime=AU.duration*this.value/100};
+  $('roadBtn').onclick=function(){drawRoad();go(9)};$('miniT').onclick=function(){drawRoad();go(9)};$('miniP').onclick=togglePlay;
+  $('rdBack').onclick=function(){renderHome();go(7)};
+  $('rdAdd').onclick=function(){$('rdFile').value='';$('rdFile').click()};
+  $('rdFile').onchange=function(){addFiles(this.files)};$('rdDemo').onclick=demoTone;
+  $('rdAll').onclick=function(){var a=SONGS.length&&SONGS.every(function(x){return x.sel});SONGS.forEach(function(x){x.sel=!a});drawRoad()};
+  $('rdPlay').onclick=togglePlay;$('rdNext').onclick=function(){nextSong(false)};$('rdPrev').onclick=prevSong;
+  $('rdShuf').onclick=function(){SHUF=!SHUF;drawRoad()};$('rdRep').onclick=function(){REP=!REP;drawRoad()};
+}
+var MAXIMG=5,VIDA=30,VIDM=15,FEED=[],feedTab='a',CM={mode:'a',imgs:[],vid:null},fid=0;
+function scene(k){
+  var c={cafe:['#FFB27A','#FF7A1A'],bakery:['#FFE08A','#FF9F43'],sea:['#8FD3FF','#6C4DFF']}[k]||['#ddd','#999'],g='';
+  if(k==='cafe')g='<path d="M120 150H250V210A40 40 0 0 1 210 250H160A40 40 0 0 1 120 210Z" fill="#0F1B3D"/><path d="M250 165H275A22 22 0 0 1 275 209H245" fill="none" stroke="#0F1B3D" stroke-width="12"/><path d="M150 130C135 110 165 100 150 80M190 130C175 110 205 100 190 80" fill="none" stroke="#FFF6EC" stroke-width="8" stroke-linecap="round"/>';
+  else if(k==='bakery')g='<ellipse cx="200" cy="190" rx="110" ry="60" fill="#B8651B"/><ellipse cx="200" cy="175" rx="100" ry="50" fill="#E08A2E"/><path d="M150 165L175 150M195 160L220 145M240 168L262 155" stroke="#FFF6EC" stroke-width="8" stroke-linecap="round"/>';
+  else g='<circle cx="290" cy="90" r="42" fill="#FFF6EC"/><path d="M0 200C60 170 100 230 160 200S280 170 400 200V300H0Z" fill="#2BB673"/><path d="M0 240C70 215 120 265 190 240S320 215 400 245V300H0Z" fill="#0F1B3D" fill-opacity=".55"/>';
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c[0]+'"/><stop offset="1" stop-color="'+c[1]+'"/></linearGradient></defs><rect width="400" height="300" fill="url(#g)"/>'+g+'</svg>')}
+FEED=[
+ {id:++fid,t:'a',who:'Elif',venue:'Moda Fırın',member:true,when:'28 Ekim',media:[{k:'img',url:scene('bakery')},{k:'img',url:scene('cafe')}],cap:'Seni çok özlemişim, simit de harikaydı.',likes:3,sample:true},
+ {id:++fid,t:'a',who:'Mert',venue:'Sahil Kafe',member:true,when:'25 Ekim',media:[{k:'img',url:scene('sea')}],cap:'Manzara şahane, jest fiyatı da cabası.',likes:5,sample:true},
+ {id:++fid,t:'a',who:'Deniz',venue:'Mavi Kapı Kafe',member:false,when:'20 Ekim',media:[{k:'img',url:scene('cafe')},{k:'img',url:scene('sea')},{k:'img',url:scene('bakery')}],cap:'Jestora üyesi değil ama yeri çok güzel.',likes:2,sample:true},
+ {id:++fid,t:'m',who:'Kadıköy Kahve Atölyesi',venue:'Kadıköy Kahve Atölyesi',member:true,when:'Bu hafta',media:[{k:'img',url:scene('cafe')}],cap:'Jest fiyatı: 100 yerine 80 TL. Gel, çekirdeklerimizi birlikte seçelim.',likes:8,sample:true},
+ {id:++fid,t:'m',who:'Moda Fırın',venue:'Moda Fırın',member:true,when:'Bu hafta',media:[{k:'img',url:scene('bakery')}],cap:'Sabah taze simit, jest fiyatı 120 TL menü.',likes:6,sample:true}
+];
+function fmeta(f){return f.venue+(f.t==='a'?(f.member?' · Üye mekan':' · Jestora üyesi değil'):'')}
+function renderFeed(){
+  $('fdA').setAttribute('aria-pressed',String(feedTab==='a'));$('fdM').setAttribute('aria-pressed',String(feedTab==='m'));
+  $('fdNew').hidden=false;
+  var box=$('fdList');box.innerHTML='';
+  var L=FEED.filter(function(f){return f.t===feedTab});
+  if(!L.length){var e=document.createElement('p');e.className='sub';e.textContent=feedTab==='a'?'Henüz anı yok. Tamamlanan bir jestten sonra ilk anıyı sen paylaş.':'Henüz tanıtım yok.';box.appendChild(e)}
+  L.forEach(function(f){
+    var d=document.createElement('article');d.className='post';
+    d.innerHTML='<div class="ph"><div class="fa2"></div><div class="pt"><b></b><small></small></div><span class="tag2"></span></div><div class="pm"></div><div class="cp" style="overflow-wrap:anywhere"></div><div class="pa"><button class="chip lk" type="button"></button><button class="chip rpb" type="button">Bildir</button></div>';
+    var fa=d.querySelector('.fa2');fa.style.background=fcol(f.who);fa.textContent=(f.who.replace(/[^\p{L}]/gu,'').slice(0,2)||'?').toLocaleUpperCase('tr');
+    d.querySelector('b').textContent=f.t==='a'?(f.mine?'Sen':f.who):f.who;d.querySelector('small').textContent=fmeta(f)+' · '+f.when;
+    var tg=d.querySelector('.tag2');if(f.t==='m'){tg.textContent='Tanıtım';tg.className='tag2 ad'}else if(f.sample)tg.textContent='Örnek';else tg.remove();
+    var pm=d.querySelector('.pm');var im=f.media.filter(function(m){return m.k==='img'});
+    if(f.media.length===1)pm.className='pm one';else if(f.media.length%2)pm.className='pm odd';
+    f.media.forEach(function(m){var el;if(m.k==='img'){el=document.createElement('img');el.alt=f.venue;el.src=m.url}else{el=document.createElement('video');el.controls=true;el.playsInline=true;el.preload='metadata';el.src=m.url;pm.className='pm one'}pm.appendChild(el)});
+    if(!f.media.length)pm.remove();
+    var cp=d.querySelector('.cp');if(f.cap)cp.textContent=f.cap;else cp.remove();
+    var lk=d.querySelector('.lk');lk.textContent=(f.liked?'♥ ':'♡ ')+f.likes;lk.setAttribute('aria-pressed',String(!!f.liked));lk.onclick=function(){f.liked=!f.liked;f.likes+=f.liked?1:-1;renderFeed()};
+    var rb=d.querySelector('.rpb');if(f.mine){rb.textContent='Sil';rb.onclick=function(){FEED.splice(FEED.indexOf(f),1);renderFeed()}}else{rb.onclick=function(){rb.textContent='Bildirildi';rb.disabled=true}}
+    box.appendChild(d)});
+}
+function cmInfo(){
+  var lim=CM.mode==='m'?VIDM:VIDA;
+  $('cmInfo').textContent=CM.vid?('Video: '+CM.vid.name+' ('+Math.round(CM.vid.dur)+' sn)'):(CM.imgs.length?CM.imgs.length+' / '+MAXIMG+' fotoğraf':'En fazla '+MAXIMG+' fotoğraf ya da 1 video ('+lim+' sn).');
+}
+function openCmp(mode){
+  CM={mode:mode,imgs:[],vid:null};$('cmErr').textContent='';$('cmCap').value='';
+  $('cmT').textContent=mode==='a'?'Jest anısı paylaş':'Mekan tanıtımı (üye işletme)';
+  $('cmJw').hidden=mode!=='a';$('cmVw').hidden=mode!=='m';
+  var sj=$('cmJ');sj.innerHTML='';var done=JESTS.filter(function(j){return j.status==='Tamamlandı'});
+  done.forEach(function(j,i){var o=document.createElement('option');o.value=i;o.textContent=joinTR(j.names)+' · '+j.place+' · '+j.when;sj.appendChild(o)});
+  var sv=$('cmV');sv.innerHTML='';VENUES.filter(function(v){return v.id!=='c'}).forEach(function(v){var o=document.createElement('option');o.value=v.name;o.textContent=v.name;sv.appendChild(o)});
+  $('cmRule').textContent=mode==='a'?'Anı yalnızca tamamlanan (iki taraf QR ile onaylı) jestler için paylaşılır. Gönderiyi sadece jestlilerin görür. Fotoğrafta yer alan arkadaşın istersen kaldırtabilir.':'Tanıtım gönderileri "Tanıtım" (reklam) etiketiyle görünür. Demoda herkes mekan gibi deneyebilir, gerçek uygulamada sadece onaylı üye işletmeler ekler.';
+  $('cmGo').disabled=mode==='a'&&!done.length;if(mode==='a'&&!done.length)$('cmErr').textContent='Henüz tamamlanmış jestin yok. Bir jesti bitirince anı paylaşabilirsin.';
+  cmInfo();$('cmp').hidden=false;$('cmp').scrollIntoView({block:'nearest'});
+}
+function cmAddImgs(files){
+  var e='';if(CM.vid){CM.vid=null}
+  Array.prototype.forEach.call(files,function(f){
+    if(CM.imgs.length>=MAXIMG){e='En fazla '+MAXIMG+' fotoğraf ekleyebilirsin.';return}
+    if(!/^image\//.test(f.type)){e='"'+f.name+'" bir fotoğraf değil.';return}
+    if(f.size>26214400){e='"'+f.name+'" 25 MB sınırını aşıyor.';return}
+    CM.imgs.push({k:'img',url:URL.createObjectURL(f),name:f.name})});
+  $('cmErr').textContent=e;cmInfo()}
+function cmAddVid(f){
+  if(!f)return;var lim=CM.mode==='m'?VIDM:VIDA;
+  if(!/^video\//.test(f.type)){$('cmErr').textContent='Lütfen bir video seç.';return}
+  if(f.size>26214400){$('cmErr').textContent='Video 25 MB sınırını aşıyor.';return}
+  var u=URL.createObjectURL(f),v=document.createElement('video');v.preload='metadata';
+  v.onloadedmetadata=function(){var dur=v.duration;
+    if(isFinite(dur)&&dur>lim+0.5){$('cmErr').textContent='Video en fazla '+lim+' saniye olabilir (bu '+Math.round(dur)+' sn).';URL.revokeObjectURL(u);return}
+    CM.imgs=[];CM.vid={k:'vid',url:u,name:f.name,dur:isFinite(dur)?dur:0};$('cmErr').textContent='';cmInfo()};
+  v.onerror=function(){$('cmErr').textContent='Video okunamadı. Başka bir video dene.';URL.revokeObjectURL(u)};
+  v.src=u}
+function cmShare(){
+  var cap=$('cmCap').value.trim();
+  var w=modHard(cap);
+  if(w){$('cmErr').textContent='"'+w+'" Jestora’da yasak: bahis içeren paylaşım yapılamaz.';return}
+  var sw=modSoft(cap);if(sw&&SOFTOK!==cap){SOFTOK=cap;$('cmErr').textContent=SOFTMSG(sw);return}
+  var media=CM.vid?[CM.vid]:CM.imgs.slice();
+  if(!media.length&&!cap){$('cmErr').textContent='Bir fotoğraf, video ya da yazı ekle.';return}
+  var f;
+  if(CM.mode==='a'){var done=JESTS.filter(function(j){return j.status==='Tamamlandı'});var j=done[+$('cmJ').value];if(!j)return;
+    f={id:++fid,t:'a',who:dname(),venue:j.place,member:VENUES.some(function(v){return v.name===j.place&&v.id!=='c'}),when:j.when,media:media,cap:cap,likes:0,mine:true}}
+  else{var vn=$('cmV').value;f={id:++fid,t:'m',who:vn,venue:vn,member:true,when:'Şimdi',media:media,cap:cap,likes:0,mine:true}}
+  FEED.unshift(f);feedTab=CM.mode;$('cmp').hidden=true;renderFeed();
+}
+function feedInit(){
+  $('feedBtn').onclick=function(){renderFeed();go(10)};$('fdBack').onclick=function(){renderHome();go(7)};
+  $('fdA').onclick=function(){feedTab='a';renderFeed()};$('fdM').onclick=function(){feedTab='m';renderFeed()};
+  $('fdNew').onclick=function(){openCmp('a')};$('fdVenue').onclick=function(){openCmp('m')};$('cmNo').onclick=function(){$('cmp').hidden=true};
+  $('cmImg').onclick=function(){$('cmFi').value='';$('cmFi').click()};$('cmFi').onchange=function(){cmAddImgs(this.files)};
+  $('cmVid').onclick=function(){$('cmFv').value='';$('cmFv').click()};$('cmFv').onchange=function(){cmAddVid(this.files&&this.files[0])};
+  $('cmClr').onclick=function(){CM.imgs=[];CM.vid=null;$('cmErr').textContent='';cmInfo()};$('cmGo').onclick=cmShare;
+}
+function renderHome(){
+  renderAvatar();renderFriends();drawRoad();
+  $('hname').textContent=dname();$('huser').textContent='@'+(S.user||'jest');
+  var a=JESTS.filter(function(j){return j.active}),p=JESTS.filter(function(j){return !j.active});
+  $('hcount').textContent=a.length+' aktif · '+p.length+' pasif jest';
+  $('tabA').textContent='Aktif ('+a.length+')';$('tabP').textContent='Pasif ('+p.length+')';
+  $('tabA').setAttribute('aria-pressed',String(homeTab==='a'));$('tabP').setAttribute('aria-pressed',String(homeTab==='p'));
+  var list=(homeTab==='a'?a:p).filter(function(j){return !selF||j.names.indexOf(selF)>-1}),box=$('jlist');box.innerHTML='';
+  if(!list.length){var e=document.createElement('p');e.className='sub';e.textContent=selF?selF+' ile '+(homeTab==='a'?'aktif':'geçmiş')+' jestin yok.':(homeTab==='a'?'Aktif jestin yok. Yeni bir davet gönder.':'Geçmiş jestin yok.');box.appendChild(e);return}
+  list.forEach(function(j){
+    var ic=IC[j.reason]||IC['_'];
+    var d=document.createElement('div');d.className='jcard'+(j.active?'':' pas');
+    d.innerHTML='<div class="jimg" style="background:'+ic.bg+'"><svg viewBox="0 0 100 100" aria-hidden="true">'+ic.p+'</svg></div><div><div class="jt"></div><div class="jm"></div><span class="st '+stCls(j.status)+'"></span></div>';
+    d.querySelector('.jt').textContent=joinTR(j.names)+' · '+j.reason;
+    d.querySelector('.jm').textContent=j.place+' · '+j.when;
+    d.querySelector('.st').textContent=j.status;
+    if(j.sample){var x=document.createElement('span');x.className='ex';x.textContent='Örnek';d.lastChild.appendChild(x)}
+    box.appendChild(d);
+  });
+}
+function avatarInit(){
+  $('avBtn').onclick=function(){$('avFile').click()};
+  $('avFile').onchange=function(){
+    var f=this.files&&this.files[0];if(!f||!/^image\//.test(f.type))return;
+    var r=new FileReader();r.onload=function(){
+      var im=new Image();im.onload=function(){
+        var c=document.createElement('canvas');c.width=c.height=256;var x=c.getContext('2d');
+        var m=Math.min(im.width,im.height);x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,256,256);
+        S.avatar=c.toDataURL('image/jpeg',.85);renderAvatar();
+      };im.src=r.result};
+    r.readAsDataURL(f);
+  };
+  $('tabA').onclick=function(){homeTab='a';renderHome()};
+  $('tabP').onclick=function(){homeTab='p';renderHome()};
+  $('newJ').onclick=function(){S.curJ=null;if(selF){S.guests=[selF];$('who').value='';renderG();check()}go(1)};
+  $('toHome').onclick=function(){renderHome();go(7)};
+  $('toHome2').onclick=function(){renderHome();go(7)};
+}
+
+let AGEOK=false,authMode='up',authStage=0,CODE='',otpTries=0,otpTimer=null;
+function otpReset(){AGEOK=false;$('ageBox').hidden=true;$('authForm').hidden=false;authStage=0;CODE='';clearInterval(otpTimer);$('otpRow').hidden=true;$('otp').value='';['fn','u','ph'].forEach(function(i){$(i).readOnly=false})}
+function authUI(){
+  const up=authMode==='up';otpReset();
+  $('authTitle').textContent=up?'Hesap oluştur':'Tekrar hoş geldin';
+  $('nameRow').hidden=!up;$('uRow').hidden=true;$('phoneRow').hidden=false;$('kvRow').hidden=!up;
+  $('authGo').textContent='Kod gönder';
+  $('tabUp').setAttribute('aria-pressed',String(up));$('tabIn').setAttribute('aria-pressed',String(!up));
+  $('aerr').textContent='';
+}
+function fmtPh(){
+  let d=$('ph').value.replace(/\D/g,'');
+  if(d.startsWith('90')&&d.length>10)d=d.slice(2);
+  if(d.startsWith('0'))d=d.slice(1);
+  d=d.slice(0,10);
+  $('ph').value=[d.slice(0,3),d.slice(3,6),d.slice(6,8),d.slice(8,10)].filter(Boolean).join(' ');
+  return d;
+}
+function sendCode(){
+  CODE=String(Math.floor(100000+Math.random()*900000));otpTries=0;$('otp').value='';
+  $('otpHint').textContent='Demo: SMS gönderilmediği için kod burada: '+CODE+'. Gerçek sürümde +90 '+$('ph').value+' numarasına SMS ile gelir.';
+  var left=30,rb=$('otpResend');rb.disabled=true;rb.textContent='Tekrar gönder ('+left+')';clearInterval(otpTimer);
+  otpTimer=setInterval(function(){left--;if(left<=0){clearInterval(otpTimer);rb.disabled=false;rb.textContent='Tekrar gönder'}else rb.textContent='Tekrar gönder ('+left+')'},1000)}
+function autoU(fn){var b=asciiU(fn.toLowerCase().replace(/\s+/g,'.')).replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[._-]+|[._-]+$/g,'').slice(0,26);if(!/[a-z]/.test(b))b='jest';var u=b;while(u.length<3||unameErr(u)){u=b+Math.floor(10+Math.random()*90)}return u}
+function saveSess(){try{localStorage.setItem('jest-demo-oturum',JSON.stringify({u:S.user,n:S.name}))}catch(e){}}
+function loadSess(){try{var o=JSON.parse(localStorage.getItem('jest-demo-oturum')||'null');if(o&&o.u){S.user=o.u;if(o.n)S.name=o.n;return true}}catch(e){}return false}
+function authSubmit(e){
+  e.preventDefault();
+  const up=authMode==='up';
+  if(authStage===0){
+    const fn=$('fn').value.trim().replace(/\s+/g,' '),u=up?autoU(fn):'';
+    if(up)$('u').value=u;
+    let m='';
+    if(up){if(!nameOk(fn))m=fn.length<2?'Adını ve soyadını yaz.':'Ad yalnızca harf, boşluk, nokta ve kesme işareti içerebilir.'}
+    if(!m&&!/^5\d{9}$/.test(fmtPh()))m='Telefon numarası 5 ile başlayan 10 haneli olmalı.';
+    if(!m&&up&&!$('kv').checked)m='Aydınlatma metnini ve kullanım şartlarını onaylamalısın.';
+    $('aerr').textContent=m;if(m)return;
+    authStage=1;['fn','u','ph'].forEach(function(i){$(i).readOnly=true});$('otpRow').hidden=false;$('authGo').textContent='Doğrula';sendCode();$('otp').focus();return}
+  const c=$('otp').value.replace(/\D/g,'');
+  if(otpTries>=5){$('aerr').textContent='Çok fazla yanlış deneme. Tekrar gönder ile yeni kod iste.';return}
+  if(c.length!==6){$('aerr').textContent='6 haneli kodu yaz.';return}
+  if(c!==CODE){otpTries++;$('aerr').textContent='Kod yanlış. Kalan hak: '+(5-otpTries)+'.';return}
+  $('aerr').textContent='';
+  if(authMode==='up'&&!AGEOK){clearInterval(otpTimer);$('authForm').hidden=true;$('ageBox').hidden=false;$('ageErr').textContent='';return}
+  const u=asciiU(($('u').value||S.user||'jest').trim().replace(/\s+/g,'_')),fn=$('fn').value.trim().replace(/\s+/g,' ');
+  S.user=u;if(nameOk(fn))S.name=fn;saveSess();clearInterval(otpTimer);
+  $('hello').textContent='Merhaba, '+dname();
+  otpReset();renderHome();go(7);
+}
+var LEGAL={
+a:['Aydınlatma metni (KVKK m.10)',['Veri sorumlusu: [Jestora işletmesinin unvanı ve adresi, kuruluşta yazılacak].','İşlenen veriler: ad soyad, kullanıcı adı, telefon numarası, davet ve jest kayıtları, mesajlar, paylaştığın foto/video/ses, yaş doğrulama sonucu (yalnızca 18+ bilgisi).','Amaçlar: hesabını açmak ve doğrulamak, davetleri ve jestleri yürütmek, işletme komisyonunu hesaplamak, kötüye kullanımı önlemek, yasal yükümlülükler.','Hukuki sebepler: sözleşmenin kurulması ve ifası, hukuki yükümlülük, meşru menfaat; foto, video ve konum gibi isteğe bağlı veriler için açık rıza.','Aktarım: SMS gönderen hizmet sağlayıcı, bulut barındırma sağlayıcısı, jest yaptığın işletme (yalnızca jest için gerekli bilgi), yetkili kamu kurumları.','Haklar (m.11): verinin işlenip işlenmediğini öğrenme, bilgi isteme, düzeltme, silme, itiraz. Başvuru: [iletişim adresi, kuruluşta yazılacak].','Jestora para tutmaz, kart bilgisi almaz.']],
+t:['Kullanım şartları',['Jestora 18 yaş ve üzeri içindir; yaş e-Devlet belirteciyle doğrulanır.','Jestora tanıdıklarını bir mekanda buluşmaya davet etmek içindir. Eşleştirme, flört, bahis ve para karşılığı buluşma yasaktır.','Jest bedeli işletmede ödenir. Jestora ödeme tutmaz; komisyon işletmeye aylık faturalanır.','Hesap sahibi paylaştığı içerikten sorumludur. Hakaret, taciz, yasa dışı içerik yasaktır. Bildir ve engelle her mesajda vardır; ihlalde içerik kaldırılır, hesap kapatılabilir.','QR onayı iki tarafça yapılır. Sahte onay hesabın kapanmasına yol açar.','Hesabını istediğin zaman silebilirsin.']]};
+function showLegal(k){var d=LEGAL[k];$('lgH').textContent=d[0];$('lgB').innerHTML='';d[1].forEach(function(t){var p=document.createElement('p');p.style.margin='0';p.textContent=t;$('lgB').appendChild(p)});$('legal').hidden=false;$('authForm').hidden=true}
+function authInit(){
+  $('lgA').onclick=function(e){e.preventDefault();showLegal('a')};$('lgT').onclick=function(e){e.preventDefault();showLegal('t')};
+  $('lgX').onclick=function(){$('legal').hidden=true;$('authForm').hidden=false};
+  $('ageOk').onclick=function(){AGEOK=true;authSubmit({preventDefault:function(){}})};
+  $('ageNo').onclick=function(){$('ageErr').textContent='e-Devlet belirteci 18 yaş altı gösteriyor. Jestora 18 yaş ve üzeri içindir, hesap açılamaz.'};
+  $('tabUp').onclick=()=>{authMode='up';authUI()};
+  $('tabIn').onclick=()=>{authMode='in';authUI()};
+  $('authForm').onsubmit=e=>e.preventDefault();
+  let uTouched=false;
+  $('u').addEventListener('input',()=>{uTouched=true;ustat()});
+  $('fn').addEventListener('input',()=>{if(uTouched&&$('u').value)return;uTouched=false;$('u').value=asciiU($('fn').value.trim().replace(/\s+/g,'')).replace(/[^a-z0-9._-]/g,'').slice(0,30);ustat()});
+  $('authGo').onclick=authSubmit;
+  $('authForm').onkeydown=e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type!=='checkbox')authSubmit(e)};
+  $('ph').oninput=fmtPh;
+  $('otpResend').onclick=function(){sendCode();$('aerr').textContent=''};$('otpChange').onclick=function(){authUI()};
+  $('logout').onclick=()=>{S.user='';try{localStorage.removeItem('jest-demo-oturum')}catch(e){}authUI();go(0)};
+  authUI();
+}
+function cdText(){
+  const ms=S.date-new Date();if(ms<=0)return 'Buluşma zamanı geldi';
+  const m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;
+  let p=(d?d+' gün ':'')+(h?h+' saat ':'')+(!d&&mi?mi+' dakika ':'');
+  if(!p)p='1 dakikadan az ';
+  return 'Buluşmaya '+p+'kaldı';
+}
+function updCD(){if(!S.date)return;const t=cdText();document.querySelectorAll('.invite .cd').forEach(e=>{e.textContent=t})}
+function tick(){
+  $('clock').textContent=new Date().toLocaleString('tr-TR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  updCD();
+}
+const joinTR=a=>a.length<2?(a[0]||'Can'):a.slice(0,-1).join(', ')+' ve '+a[a.length-1];
+function guestNames(){const p=$('who').value.trim();const g=S.guests.slice();if(p&&!g.includes(p))g.push(p);return g.length?g.slice(0,6):['Can']}
+const whoTxt=()=>joinTR(guestNames());
+const slug=s=>s.toLocaleLowerCase('tr').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'')||'davet';
+function gl(){
+  const el=$('glist');el.innerHTML='';
+  S.guests.forEach((g,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.setAttribute('aria-pressed','true');
+    b.textContent=g+' ✕';b.setAttribute('aria-label',g+' kişisini çıkar');
+    b.onclick=()=>{S.guests.splice(i,1);gl();check()};el.appendChild(b)});
+}
+function addGuest(){
+  const n=$('who').value.trim();if(!n||S.guests.length>=6||bad())return;
+  if(!S.guests.includes(n))S.guests.push(n);
+  $('who').value='';gl();check();
+}
+function renderG(){
+  const g=guestNames();
+  $('lnk').textContent='jest.app/d/ayse-'+(g.length>1?'grup':slug(g[0]))+'-4k2';
+  const box=$('gstat');
+  box.innerHTML='<h2>Davetliler ('+g.length+')</h2><div class="chips"></div><p class="sub" style="font-size:13px;margin-top:8px"></p>';
+  const c=box.querySelector('.chips');
+  g.forEach(n=>{const s=document.createElement('span');s.className='chip';s.style.cursor='default';s.textContent=n+' · bekliyor';c.appendChild(s)});
+  box.querySelector('p').textContent=g.length>1?'Herkes ayrı yanıtlar. Kabul edenlerle jest yapılır. Herkes kendi hesabını öder.':'Yanıt gelince burada görünür.';
+}
+function readDate(){
+  const y=+$('yy').value,m=+$('mm').value;let d=+$('dd').value;
+  const last=new Date(y,m+1,0).getDate();if(d>last){d=last;$('dd').value=d}
+  const hm=($('tt').value||'15:00').split(':').map(Number);
+  S.date=new Date(y,m,d,hm[0],hm[1]);
+}
+const when=()=>S.date.getDate()+' '+MONTHS[S.date.getMonth()]+' '+S.date.getFullYear()+' '+DAYS[S.date.getDay()]+' · '+pad(S.date.getHours())+':'+pad(S.date.getMinutes());
+function syncSel(){$('dd').value=S.date.getDate();$('mm').value=S.date.getMonth();$('yy').value=S.date.getFullYear();$('tt').value=pad(S.date.getHours())+':'+pad(S.date.getMinutes())}
+function setRem(){
+  const who=whoTxt();const tn=$('tnote').value.trim();
+  $('remMsg').textContent=who+', hatırlatma: '+when()+', '+vname()+'. '+inv()+' ile jestleşiyoruz.'+(tn?' Not: '+tn:'')+' Görüşmek üzere!';
+}
+function initDate(){
+  for(let i=1;i<=31;i++)$('dd').add(new Option(i,i));
+  MONTHS.forEach((n,i)=>$('mm').add(new Option(n,i)));
+  const y0=new Date().getFullYear();[y0,y0+1].forEach(y=>$('yy').add(new Option(y,y)));
+  const t=new Date();t.setDate(t.getDate()+1);t.setHours(15,0,0,0);S.date=t;syncSel();
+  ['dd','mm','yy','tt'].forEach(id=>{$(id).onchange=()=>{readDate();check();setRem()}});
+  $('tnote').oninput=()=>{check();setRem()};
+  for(let i=1;i<=31;i++)$('pd').add(new Option(i,i));
+  MONTHS.forEach((n,i)=>$('pm').add(new Option(n,i)));
+  [y0,y0+1].forEach(y=>$('py').add(new Option(y,y)));
+}
+function loadProp(){$('pd').value=S.date.getDate();$('pm').value=S.date.getMonth();$('py').value=S.date.getFullYear();$('pt').value=pad(S.date.getHours())+':'+pad(S.date.getMinutes());$('perr').textContent=''}
+function sendProp(){
+  const y=+$('py').value,m=+$('pm').value;let d=+$('pd').value;
+  d=Math.min(d,new Date(y,m+1,0).getDate());
+  const hm=($('pt').value||'15:00').split(':').map(Number);
+  const nd=new Date(y,m,d,hm[0],hm[1]);
+  if(nd<new Date()){$('perr').textContent='Geçmiş bir zaman öneremezsin.';return}
+  const pn=$('pnote').value.trim();
+  const bw=modHard(pn);
+  if(bw){$('perr').textContent='"'+bw+'" kelimesi Jestora\'te kullanılamaz. Başka bir şekilde yaz.';return}
+  S.prevDate=S.date;S.pnote=pn;
+  S.date=nd;syncSel();setJ('Zaman önerildi');fillInv($('invCard2'));fillInv($('invCard'));
+  $('propose').hidden=true;$('ansrow').hidden=true;$('toAyse').hidden=false;
+  $('otherNote').textContent='Öneri '+inv()+' kullanıcısına gönderildi: '+when()+'. Onayı bekleniyor.';
+}
+function showCounter(){
+  const who=guestNames()[0];
+  $('cFrom').textContent=inv()+', '+who+' yeni bir zaman önerdi:';
+  const el=$('invCard3');el.innerHTML=invHTML();
+  el.querySelector('.pill').textContent='Yeni zaman önerisi';
+  el.querySelector('.big').textContent=when();
+  el.querySelector('.m').textContent=vname()+' · '+who+' önerdi · önceki zaman: '+(S.prevDate?S.prevDate.getDate()+' '+MONTHS[S.prevDate.getMonth()]+' '+pad(S.prevDate.getHours())+':'+pad(S.prevDate.getMinutes()):'-');
+  el.querySelector('.zn').textContent=S.pnote?who+'\'ın notu: '+S.pnote:'';
+  go(6);
+}
+const TRM={ğ:'g',ı:'i',ö:'o',ü:'u',ş:'s',ç:'c',â:'a',î:'i',û:'u'};
+const asciiU=t=>t.toLocaleLowerCase('tr').replace(/[ğıöüşçâîû]/g,c=>TRM[c]);
+const TAKEN=['ayse','ayse.kaya','mehmet','ali','elif','mert','zeynep','deniz','cem','selin','can'];
+const RESERVED=['jest','admin','destek','support','help','yardim','jestapp','moderator','root'];
+function unameErr(u){
+  if(u.length<3||u.length>30)return 'Kullanıcı adı 3-30 karakter olmalı (şu an '+u.length+').';
+  const bc=u.match(/[^a-z0-9._-]/);if(bc)return '"'+bc[0]+'" karakteri kullanılamaz. Kullanıcı adında a-z, 0-9, nokta, alt çizgi ve tire kullanabilirsin.';
+  if(/^[._-]|[._-]$/.test(u))return 'Kullanıcı adı nokta, alt çizgi veya tireyle başlayıp bitemez.';
+  if(/[._-]{2}/.test(u))return 'Üst üste iki işaret olamaz (örn. ..).';
+  if(!/[a-z]/.test(u))return 'En az bir harf içermeli.';
+  if(RESERVED.includes(u))return 'Bu kullanıcı adı Jestora’ya ayrılmış.';
+  if(HARD.some(w=>u.includes(asciiU(w))))return 'Bu kullanıcı adı Jestora’da kullanılamaz. Başka bir ad dene.';
+  if(TAKEN.includes(u))return 'Bu kullanıcı adı alınmış.';
+  return '';
+}
+function ustat(){
+  const el=$('ustat'),u=asciiU($('u').value.trim().replace(/\s+/g,'_'));el.innerHTML='';el.className='ustat';
+  if(!u||authMode!=='up')return;
+  const e=unameErr(u);
+  if(!e){el.className='ustat ok';el.textContent='✓ @'+u+' müsait';return}
+  el.className='ustat no';const t=document.createElement('span');t.textContent='✗ '+e;el.appendChild(t);
+  if(e==='Bu kullanıcı adı alınmış.'){[u+'1',u+'_jest',u+'.'+(new Date().getFullYear()%100)].forEach(function(x){if(unameErr(x))return;const b=document.createElement('button');b.type='button';b.textContent='@'+x;b.onclick=function(){$('u').value=x;ustat()};el.appendChild(b)})}
+}
+const dname=()=>S.name||S.user||'Ayşe';
+const inv=dname;
+const nameOk=n=>/^[\p{L}][\p{L}\p{M} .'’-]{1,39}$/u.test(n);
+const HARD=['bahis','iddaa','bahse'],SOFT=['flört','flirt','ceza','sevgili olalım'];
+const BANNED=HARD;let SOFTOK='';
+const norm=t=>t.toLocaleLowerCase('tr').replace(/[^\p{L}]/gu,'');
+const modHard=t=>{const n=norm(t);return HARD.find(w=>n.includes(norm(w)))};
+const modSoft=t=>{const n=norm(t);return SOFT.find(w=>n.includes(norm(w)))};
+const SOFTMSG=w=>'Bu ifade ("'+w+'") Jestora kurallarına aykırı olabilir. Düzenle ya da yine de göndermek için tekrar bas. Rahatsız edici içerik bildirilebilir.';
+const vname=()=>{const v=VENUES.find(x=>x.id===S.venue);const p=S.pickName||'';return v.id==='c'&&p?p:v.name};
+function updFind(){const p=$('place').value.trim();$('findlink').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((p||'kafe')+' '+S.area+' İstanbul')}
+function dec(x){x=x.replace(/\+/g,' ');try{return decodeURIComponent(x)}catch(e){return x}}
+function parsePlace(){
+  let val=$('place').value.trim().replace(/\s+/g,' ');const out=$('picked');
+  S.pickName='';let note='',ll=null;
+  if(!/^https?:\/\//i.test(val)&&/^(www\.|maps\.|[a-z0-9-]+\.(google|apple|openstreetmap|yandex)\.[a-z.]+\/)\S*$/i.test(val))val='https://'+val;
+  if(/^https?:\/\//i.test(val)){
+    try{
+      const u=new URL(val);
+      if(/(^|\.)goo\.gl$|(^|\.)g\.co$|(^|\.)bit\.ly$/i.test(u.hostname)){note='Kısa bağlantılar okunamıyor. Haritalar\'da adresi açıp uzun bağlantıyı kopyala ya da yerin adını yaz.'}
+      else{
+        const m=u.pathname.match(/\/place\/([^/]+)/);
+        const q=u.searchParams.get('query')||u.searchParams.get('q')||u.searchParams.get('destination')||u.searchParams.get('address')||'';
+        let name=m?dec(m[1]):dec(q);
+        const c=val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||val.match(/[?&](?:ll|mlat)=(-?\d+\.\d+)(?:,|&mlon=)(-?\d+\.\d+)/)||name.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
+        if(c)ll=c[1].slice(0,8)+', '+c[2].slice(0,8);
+        if(/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(name))name='Haritadan seçilen nokta';
+        name=name.replace(/\s+/g,' ').trim();
+        if(!name&&ll)name='Haritadan seçilen nokta';
+        if(name)S.pickName=name.slice(0,60);else note='Bağlantıda yer adı bulunamadı. Yerin adını yaz.';
+      }
+    }catch(e){note='Bağlantı okunamadı. Yerin adını yaz.'}
+  }else if(val){S.pickName=val.slice(0,60)}
+  if(S.pickName){
+    out.hidden=false;out.innerHTML='<h2 style="margin:0 0 4px">Seçilen konum</h2><div class="t" style="font-weight:800"></div><div class="sub" style="font-size:14px"></div>';
+    out.querySelector('.t').textContent=S.pickName+', '+S.area;
+    out.querySelector('.sub').textContent=ll?'Koordinat: '+ll:'Koordinat yok. Gerçek uygulamada haritadan seçilen nokta kaydedilir.';
+  }else if(note){out.hidden=false;out.textContent=note;out.className='card sub'}
+  else out.hidden=true;
+  if(S.pickName)out.className='card';
+}
+const AREAS=['Kadıköy','Beşiktaş','Üsküdar'];
+const S={reason:'Özledim',venue:'a',time:0,area:'Kadıköy',guests:['Can']};
+function areas(){
+  const el=$('areas');el.innerHTML='';
+  AREAS.forEach(a=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=a;
+    b.setAttribute('aria-pressed',String(S.area===a));
+    b.onclick=()=>{S.area=a;const first=VENUES.find(v=>v.area===a);S.venue=first?first.id:'c';areas();venues()};
+    el.appendChild(b)});
+}
+const $=id=>document.getElementById(id);
+let step=1;
+
+function chips(el,items,key,single){
+  el.innerHTML='';
+  items.forEach((t,i)=>{
+    const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=t;
+    b.setAttribute('aria-pressed',String(key==='reason'?S.reason===t:S.time===i));
+    b.onclick=()=>{S[key]=key==='reason'?t:i;if(key==='reason')$('note').placeholder=REX[t]||'';chips(el,items,key);check()};
+    el.appendChild(b);
+  });
+}
+function venues(){
+  const el=$('venues');el.innerHTML='';
+  const cur=VENUES.find(v=>v.id===S.venue);
+  $('custom').hidden=S.venue!=='c';
+  updFind();
+  $('maplink').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent((cur&&cur.area!=='*'?cur.name+' ':'kafe ')+S.area+' İstanbul');
+  VENUES.filter(v=>v.area===S.area||v.area==='*').forEach(v=>{
+    const b=document.createElement('button');b.type='button';b.className='venue';
+    b.setAttribute('aria-pressed',String(S.venue===v.id));
+    b.innerHTML='<div><div class="t"></div><div class="m"></div></div>'+(v.jest?'<div class="price"><s>'+v.normal+' TL</s><strong>'+v.jest+' TL</strong></div>':'');
+    b.querySelector('.t').textContent=v.name;b.querySelector('.m').textContent=v.meta;
+    b.onclick=()=>{S.venue=v.id;venues()};
+    el.appendChild(b);
+  });
+}
+function bad(){
+  const t=($('note').value+' '+$('tnote').value+' '+$('who').value).toLocaleLowerCase('tr');
+  return modHard(t);
+}
+function check(){
+  const w=bad();
+  const sw=modSoft($('note').value+' '+$('tnote').value);
+  $('err').textContent=w?'"'+w+'" Jestora\'te yasak: bahis içeren davet gönderilemez.':(sw?'Uyarı: "'+sw+'" ifadesi Jestora kurallarına aykırı olabilir. Gönderebilirsin, rahatsız edici içerik bildirilebilir.':'');
+  const past=!!S.date&&S.date<new Date();
+  $('derr').textContent=past?'Geçmiş bir zaman seçemezsin.':'';
+  $('make').disabled=!($('age').checked&&(S.guests.length||$('who').value.trim())&&!w&&!past);
+}
+const V=()=>VENUES.find(v=>v.id===S.venue);
+function invHTML(){
+  const v=V();const who=$('who').value.trim()||'Can';const note=$('note').value.trim();
+  return '<span class="pill"></span><div class="big"></div><div class="m"></div><div class="zn"></div><div class="cd"></div>';
+}
+function fillInv(el){
+  const v=V();const who=whoTxt();const note=$('note').value.trim();
+  el.innerHTML=invHTML();
+  el.querySelector('.pill').textContent=S.reason;
+  el.querySelector('.big').textContent=note||('Hadi jestleşelim, '+who+'!');
+  el.querySelector('.m').textContent=inv()+' seni davet etti · '+vname()+' · '+when()+(v.jest?' · Jest fiyatı '+v.jest+' TL'+(guestNames().length>0&&S.guests.length+($('who').value.trim()?1:0)>1?' kişi başı':''):'');
+  const tn=$('tnote').value.trim();el.querySelector('.zn').textContent=tn?'Not: '+tn:'';
+  setRem();updCD();
+}
+function go(n){
+  step=n;updCD();
+  for(let i=0;i<=10;i++)$('s'+i).hidden=i!==n;
+  $('steps').hidden=n===0||n===7||n===8||n===9||n===10;
+  const nn=n===6?3:n;
+  const bars=$('steps').children;
+  for(let i=0;i<4;i++){const k=Math.min(nn,4);bars[i].className=i+1<nn?'done':(i+1===k&&nn<5?'on':(nn===5?'done':''))}
+  window.scrollTo({top:0});
+}
+function confetti(){
+  const c=$('conf');c.innerHTML='';
+  const cols=['#FF7A1A','#2BB673','#FFF6EC','#5B6482'];
+  for(let i=0;i<46;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';
+    e.style.background=cols[i%4];e.style.animationDelay=Math.random()*.6+'s';e.style.transform='rotate('+Math.random()*180+'deg)';c.appendChild(e)}
+  setTimeout(()=>c.innerHTML='',3200);
+}
+function qr(){
+  const n=21,cell=10;let seed=7+S.date.getDate()*13;const r=()=>(seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff;
+  let s='<svg viewBox="0 0 '+n*cell+' '+n*cell+'" shape-rendering="crispEdges">';
+  const finder=(x,y)=>x<8&&y<8||x>n-9&&y<8||x<8&&y>n-9;
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    let on;
+    if(finder(x,y)){const fx=x<8?x:x-(n-8),fy=y<8?y:y-(n-8);
+      on=fx<7&&fy<7&&(fx===0||fx===6||fy===0||fy===6||(fx>=2&&fx<=4&&fy>=2&&fy<=4));}
+    else on=r()>.52;
+    if(on)s+='<rect x="'+x*cell+'" y="'+y*cell+'" width="'+cell+'" height="'+cell+'" fill="#0F1B3D"/>';
+  }
+  $('qr').innerHTML=s+'</svg>';
+}
+let ok1=false,ok2=false;
+function conf(btn,flag){btn.className='btn ok';btn.textContent=btn.textContent.replace('Buluştuk','Onayladı ✓')}
+function finish(){
+  const v=V();const g=guestNames();const n=g.length+1;
+  $('doneTxt').textContent=joinTR([inv()].concat(g))+', '+vname()+' mekanında jestleşti.';
+  const r=$('rcpt');
+  if(v.jest){
+    r.innerHTML='<div><span>Katılımcı</span><span>'+n+' kişi</span></div>'+
+      '<div><span>Normal fiyat</span><span>'+v.normal*n+' TL</span></div>'+
+      '<div><span>Jest fiyatı</span><span>'+v.jest*n+' TL</span></div>'+
+      '<div class="good"><span>Jest ile kazancınız</span><span>'+(v.normal-v.jest)*n+' TL</span></div>'+
+      '<div><span>Mekana komisyon faturası</span><span>'+v.fee*n+' TL</span></div>'+
+      '<div class="tot"><span>Mekanda ödenecek (kişi başı '+v.jest+' TL)</span><span>'+v.jest*n+' TL</span></div>';
+  }else{
+    r.innerHTML='<div><span>Mekan</span><span></span></div><div><span>Katılımcı</span><span>'+n+' kişi</span></div><div><span>Jestora komisyonu</span><span>0 TL</span></div><div class="tot"><span>Ödeme</span><span>Normal fiyat, mekanda</span></div><p class="sub" style="font-size:13px;margin-top:4px">Bu mekan Jestora üyesi değil. Üye mekanlarda jest fiyatından yararlanırsın.</p>';
+    r.querySelector('div span:last-child').textContent=vname();
+  }
+  setJ('Tamamlandı',true);S.curJ=null;go(5);confetti();
+}
+
+$('place').oninput=()=>{parsePlace();updFind()};$('who').oninput=check;$('note').oninput=check;$('age').onchange=check;
+$('make').onclick=()=>{fillInv($('invCard'));renderG();saveJest();go(2)};
+$('back1').onclick=()=>go(1);
+$('addG').onclick=addGuest;
+$('who').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addGuest()}};
+$('cp').onclick=async()=>{
+  try{await navigator.clipboard.writeText($('lnk').textContent);$('cp').textContent='Kopyalandı'}
+  catch(e){const r=document.createRange();r.selectNodeContents($('lnk'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('cp').textContent='Seçildi'}
+};
+$('toReply').onclick=()=>{
+  $('from').textContent=guestNames()[0]+', sana bir davet geldi:';
+  fillInv($('invCard2'));$('otherNote').textContent='';
+  $('ansrow').hidden=false;$('toAyse').hidden=true;$('propose').hidden=true;$('pnote').value='';
+  go(3);
+};
+$('other').onclick=()=>{const p=$('propose');p.hidden=!p.hidden;if(!p.hidden)loadProp()};
+$('sendProp').onclick=sendProp;
+$('toAyse').onclick=showCounter;
+$('okProp').onclick=()=>{setRem();$('yes').click()};
+$('noProp').onclick=()=>{
+  if(S.prevDate){S.date=S.prevDate;syncSel()}setJ('Bekliyor');
+  fillInv($('invCard2'));fillInv($('invCard'));
+  $('ansrow').hidden=false;$('toAyse').hidden=true;$('pnote').value='';
+  $('otherNote').textContent=inv()+' bu zamanı uygun bulmadı. İlk zamanı kabul edebilir ya da başka bir zaman önerebilirsin.';
+  go(3);
+};
+$('yes').onclick=()=>{setJ('Kabul edildi');
+  const v=V();$('meetTxt').textContent=vname()+' · '+when()+'. Katılanlar: '+joinTR([inv()].concat(guestNames()))+'. Mekana vardığınızda QR\'ı okutun.';
+  qr();ok1=ok2=false;
+  ['c1','c2'].forEach((id,i)=>{const b=$(id);b.className='btn alt';b.textContent=(i?(guestNames().length>1?'Davetliler':guestNames()[0]):inv())+': Buluştuk'});
+  go(4);
+};
+$('c1').onclick=()=>{ok1=true;conf($('c1'));if(ok1&&ok2)finish()};
+$('c2').onclick=()=>{ok2=true;conf($('c2'));if(ok1&&ok2)finish()};
+$('again').onclick=()=>{$('note').value='';$('age').checked=false;check();homeTab='a';renderHome();go(7)};
+
+chips($('reasons'),REASONS,'reason');initDate();gl();areas();tick();setInterval(tick,15000);authInit();avatarInit();chatInit();roadInit();feedInit();denInit();
+$('splash').onclick=()=>{$('splash').style.display='none'};venues();check();go(0);
+if(loadSess()){$('hello').textContent='Merhaba, '+dname();renderHome();go(7)}
+</script>
+
+<script src="/qr.js"></script>
+<script src="/api.js"></script>
+<script src="/real.js"></script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").catch(function(){})</script>

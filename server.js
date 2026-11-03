@@ -15,6 +15,7 @@ const CLOSED = process.env.JEST_KAPALI === '1' || PILOT || (DEV && CODES.length 
 const pilotFails = new Map();
 function pinHash(p) { const salt = crypto.randomBytes(8).toString('hex'); return salt + ':' + crypto.scryptSync(p, salt, 32).toString('hex'); }
 function pinOk(p, h) { const [salt, x] = h.split(':'); const y = crypto.scryptSync(p, salt, 32).toString('hex'); return x.length === y.length && crypto.timingSafeEqual(Buffer.from(x), Buffer.from(y)); }
+function titleTR(s) { return s.split(' ').map(w => w ? w.charAt(0).toLocaleUpperCase('tr') + w.slice(1).toLocaleLowerCase('tr') : w).join(' '); }   // adlar "Ad Soyad" biçimine
 const db = new DatabaseSync(process.env.JEST_DB || path.join(__dirname, 'jest.db'));
 
 db.exec(`
@@ -132,12 +133,17 @@ R('POST', '/api/verify', async ({ body }) => {
   }
   let u = db.prepare('SELECT * FROM users WHERE phone=?').get(phone);
   if (!u) {
-    const name = String(body.name || '').trim().slice(0, 40); if (name.length < 2) throw err(400, 'Adını yaz');
+    const name = titleTR(String(body.name || '').trim().replace(/\s+/g, ' ').slice(0, 40)); if (name.length < 2) throw err(400, 'Adını yaz');
     if (CLOSED && !linkRow && !CODES.includes(String(body.inviteCode || '').trim().toUpperCase()) && !CODES.includes(String(body.inviteCode || '').trim())) throw err(403, 'Kapalı pilot: geçerli davet kodu gerekli');
     if (body.terms !== true) throw err(400, 'Metinleri onaylaman gerekir');
     if (!(await ageVerified(body.ageToken))) throw err(403, '18 yaş doğrulaması gerekli');
     const r = db.prepare('INSERT INTO users(phone,name,username,created,pin) VALUES(?,?,?,?,?)').run(phone, name, newUsername(name), now(), pilotPin ? pinHash(pilotPin) : null);
     u = db.prepare('SELECT * FROM users WHERE id=?').get(r.lastInsertRowid);
+    // bu numaraya yazılmış bekleyen tüm davetler (başka linklerle gönderilenler dahil) üye olunca kişinin önüne düşer, numara silinir
+    db.prepare('SELECT * FROM invite_pending WHERE phone=? AND used=0').all(phone).forEach(pr => {
+      if (pr.host_id !== u.id && !db.prepare('SELECT 1 FROM guests WHERE invite_id=? AND user_id=?').get(pr.invite_id, u.id)) db.prepare('INSERT INTO guests(invite_id,user_id,status) VALUES(?,?,?)').run(pr.invite_id, u.id, 'pending');
+      db.prepare('DELETE FROM invite_pending WHERE id=?').run(pr.id);
+    });
   }
   if (linkRow) {   // davet linkiyle gelen: davet kişinin önüne düşer
     if (!db.prepare('SELECT 1 FROM guests WHERE invite_id=? AND user_id=?').get(linkRow.invite_id, u.id)) db.prepare('INSERT INTO guests(invite_id,user_id,status) VALUES(?,?,?)').run(linkRow.invite_id, u.id, 'pending');
