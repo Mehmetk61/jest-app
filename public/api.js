@@ -17,7 +17,8 @@ function linkDone(){LINK={token:'',info:null};try{localStorage.removeItem('jest-
 function showLinkBox(){
   var old=$('linkBox');if(old)old.remove();if(!LINK.token)return;
   var d=document.createElement('div');d.id='linkBox';d.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin:0 0 12px;font-weight:700';
-  if(LINK.info)d.textContent=LINK.info.host+' seni Jestora\'ya davet etti: '+LINK.info.venue+', '+new Date(LINK.info.at).toLocaleString('tr-TR',{day:'numeric',month:'long',weekday:'long',hour:'2-digit',minute:'2-digit'})+'. Kayıt olurken, davetin yazıldığı numarayı kullan (…'+LINK.info.phoneEnd+' ile biten).';
+  if(LINK.info&&LINK.info.kind==='goal')d.textContent=LINK.info.host+' seni Jestora\'da bir hedef jestine davet etti ('+LINK.info.goal+'): '+LINK.info.venue+', '+new Date(LINK.info.at).toLocaleString('tr-TR',{day:'numeric',month:'long',weekday:'long',hour:'2-digit',minute:'2-digit'})+'. Kayıt olurken, davetin yazıldığı numarayı kullan (…'+LINK.info.phoneEnd+' ile biten).';
+  else if(LINK.info)d.textContent=LINK.info.host+' seni Jestora\'ya davet etti: '+LINK.info.venue+', '+new Date(LINK.info.at).toLocaleString('tr-TR',{day:'numeric',month:'long',weekday:'long',hour:'2-digit',minute:'2-digit'})+'. Kayıt olurken, davetin yazıldığı numarayı kullan (…'+LINK.info.phoneEnd+' ile biten).';
   else d.textContent='Bir davet seni bekliyor. Kayıt olurken davetin yazıldığı numarayı kullan.';
   var t=$('authTitle');t.parentNode.insertBefore(d,t.nextSibling)}
 function loadLink(){if(!LINK.token)return;api('GET','/api/link/'+LINK.token).then(function(j){LINK.info=j;showLinkBox()}).catch(function(e){var t=LINK.token;LINK.token='';try{localStorage.removeItem('jest-davet')}catch(x){}var d=$('linkBox');if(d)d.remove();window.authUI&&window.authUI();var er=$('aerr');if(er)er.textContent=e.message})}

@@ -550,7 +550,7 @@ var JESTS=[
  {names:['Selin'],reason:'Sohbet',place:'Moda Fırın',when:'28 Eylül · 16:00',status:'Yanıt gelmedi',active:false,sample:true}
 ];
 var homeTab='a';
-function stCls(t){return t==='Kabul edildi'||t==='Tamamlandı'?'ok':(t==='Zaman önerildi'?'pr':(t==='Bekliyor'?'':'gr'))}
+function stCls(t){return t==='Kabul edildi'||t==='Tamamlandı'||t==='Hedef onaylandı'?'ok':(t==='Zaman önerildi'?'pr':(t==='Bekliyor'?'':'gr'))}
 function setJ(st,done){var j=S.curJ;if(!j)return;j.status=st;j.when=when();if(done)j.active=false}
 function saveJest(){
   var d={names:guestNames(),reason:S.reason,place:vname(),when:when(),status:'Bekliyor',active:true};
