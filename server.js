@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS scans(invite_id INTEGER, user_id INTEGER, at INTEGER,
 CREATE TABLE IF NOT EXISTS commissions(invite_id INTEGER PRIMARY KEY, venue_id INTEGER, amount INTEGER, month TEXT, created INTEGER);
 `);
 try { db.exec('ALTER TABLE users ADD COLUMN pin TEXT'); } catch (e) {}
+// v12: hedef jesti, üye olmayan yer (konum bul), buluşma fotoğrafı
+for (const c of ["kind TEXT DEFAULT 'meet'", 'goal TEXT', 'dir TEXT', 'goal_status TEXT', 'goal_note TEXT', 'place_name TEXT', 'place_url TEXT', 'place_lat REAL', 'place_lng REAL']) { try { db.exec('ALTER TABLE invites ADD COLUMN ' + c); } catch (e) {} }
+db.exec('CREATE TABLE IF NOT EXISTS photos(invite_id INTEGER, user_id INTEGER, at INTEGER, lat REAL, lng REAL, data TEXT, PRIMARY KEY(invite_id,user_id))');
+const PHOTO_DAYS = +process.env.JEST_FOTO_GUN || 7;   // buluşma fotoğrafları davet saatinden bu kadar gün sonra silinir
 if (!db.prepare('SELECT COUNT(*) c FROM venues').get().c) {
   const ins = db.prepare('INSERT INTO venues(name,district,normal,jest,key) VALUES(?,?,?,?,?)');
   [['Moda Kahve','Kadıköy',100,80],['Karaköy Çay Evi','Beyoğlu',90,72],['Bostancı Fırın','Kadıköy',70,56]]
@@ -63,13 +67,23 @@ function newUsername(name) {
 }
 const pubUser = u => ({ id: u.id, name: u.name, username: u.username });
 
+const goalOk = i => i.kind !== 'goal' || i.goal_status === 'approved';
+const photoCount = id => db.prepare('SELECT COUNT(*) c FROM photos WHERE invite_id=?').get(id).c;
+function venueOf(i) {   // üye mekân ya da kullanıcının seçtiği (üye olmayan) yer
+  if (i.venue_id > 0) { const v = db.prepare('SELECT * FROM venues WHERE id=?').get(i.venue_id); return { id: v.id, name: v.name, district: v.district, normal: v.normal, jest: v.jest, custom: false }; }
+  return { id: 0, name: i.place_name || 'Seçilen yer', district: '', normal: 0, jest: 0, custom: true, url: i.place_url || '', lat: i.place_lat, lng: i.place_lng };
+}
 function inviteView(i, me) {
-  const v = db.prepare('SELECT * FROM venues WHERE id=?').get(i.venue_id);
+  const v = venueOf(i);
   const host = db.prepare('SELECT id,name,username FROM users WHERE id=?').get(i.host_id);
   const guests = db.prepare('SELECT g.user_id id,u.name,g.status,g.proposal_at FROM guests g JOIN users u ON u.id=g.user_id WHERE g.invite_id=?').all(i.id);
   const scans = db.prepare('SELECT user_id FROM scans WHERE invite_id=?').all(i.id).map(s => s.user_id);
   const invited = i.host_id === me.id ? db.prepare('SELECT phone,token FROM invite_pending WHERE invite_id=? AND used=0').all(i.id) : [];
-  return { id: i.id, status: i.status, at: i.at, invited, host, venue: { id: v.id, name: v.name, district: v.district, normal: v.normal, jest: v.jest }, guests, scanned: scans,
+  const achieverId = i.kind === 'goal' ? (i.dir === 'me' ? i.host_id : (guests[0] ? guests[0].id : null)) : null;
+  const photos = db.prepare('SELECT user_id FROM photos WHERE invite_id=?').all(i.id).map(x => x.user_id);
+  return { id: i.id, status: i.status, at: i.at, invited, host, venue: v, guests, scanned: scans,
+    kind: i.kind || 'meet', goal: i.goal || '', dir: i.dir || '', goalStatus: i.goal_status || '', goalNote: i.goal_note || '', achieverId, goalOk: goalOk(i),
+    photos, photoReady: photos.length > 0,
     role: me.id === i.host_id ? 'host' : 'guest' };
 }
 function myInvite(id, me) {
@@ -160,8 +174,8 @@ R('GET', '/api/link/:token', ({ p }) => {   // davet linkine tıklayan, kayıt o
   if (!r) throw err(404, 'Davet linki geçersiz ya da daha önce kullanılmış');
   const i = db.prepare('SELECT * FROM invites WHERE id=?').get(r.invite_id);
   if (!i || i.status !== 'open') throw err(404, 'Bu davet artık geçerli değil');
-  const v = db.prepare('SELECT name,district FROM venues WHERE id=?').get(i.venue_id), h = db.prepare('SELECT name FROM users WHERE id=?').get(i.host_id);
-  return { host: h.name, venue: v.name, district: v.district, at: i.at, phoneEnd: r.phone.slice(-4) };
+  const v = venueOf(i), h = db.prepare('SELECT name FROM users WHERE id=?').get(i.host_id);
+  return { host: h.name, venue: v.name, district: v.district, at: i.at, phoneEnd: r.phone.slice(-4), kind: i.kind || 'meet', goal: i.goal || '' };
 });
 R('GET', '/api/me', ({ req }) => ({ user: pubUser(auth(req)) }));
 R('POST', '/api/logout', ({ req }) => { auth(req); db.prepare('DELETE FROM sessions WHERE token=?').run(req.headers.authorization.replace('Bearer ', '')); return { ok: true }; });
@@ -172,6 +186,7 @@ R('POST', '/api/me/delete', ({ req, body }) => {
   if (body.confirm !== 'SIL') throw err(400, 'Onay için SIL yaz');
   db.prepare('DELETE FROM sessions WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM scans WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM photos WHERE user_id=?').run(me.id);
   db.prepare("UPDATE guests SET status='declined' WHERE user_id=? AND status IN ('pending','proposed')").run(me.id);
   db.prepare("UPDATE invites SET status='cancelled' WHERE host_id=? AND status='open'").run(me.id);
   db.prepare("UPDATE users SET phone='silindi-'||id, name='Silinmiş kullanıcı', username='silindi-'||id WHERE id=?").run(me.id);
@@ -183,16 +198,39 @@ R('GET', '/api/venues', () => ({ venues: db.prepare('SELECT id,name,district,nor
 
 // ---- davetler ----
 const LINK_LIMIT = +process.env.JEST_LINK_LIMIT || 5;   // pilotta üye başına, henüz üye olmayan en fazla kaç kişi davet edilebilir
+const normTxt = t => String(t).toLocaleLowerCase('tr').replace(/[^\p{L}]/gu, '');
+const BANNED = ['bahis', 'iddia', 'kumar', 'ceza', 'kaybet', 'borç', 'borc'];
+const badText = t => BANNED.find(w => normTxt(t).includes(normTxt(w)));
+function readPlace(body) {   // üye olmayan yer: ad (zorunlu), harita bağlantısı ve koordinat (isteğe bağlı)
+  const pl = body.place || {}, name = String(pl.name || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (name.length < 2) throw err(400, 'Yerin adını yaz');
+  if (badText(name)) throw err(400, 'Yer adında Jestora kurallarına aykırı bir ifade var');
+  let url = String(pl.url || '').trim().slice(0, 400); if (url && !/^https?:\/\//i.test(url)) url = '';
+  const lat = Number(pl.lat), lng = Number(pl.lng), okll = pl.lat != null && pl.lng != null && isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  return { name, url, lat: okll ? lat : null, lng: okll ? lng : null };
+}
 R('POST', '/api/invites', ({ req, body }) => {
   const me = auth(req);
-  const v = db.prepare('SELECT * FROM venues WHERE id=?').get(+body.venueId); if (!v) throw err(400, 'Mekan seç');
+  const custom = !(+body.venueId > 0);
+  const v = custom ? null : db.prepare('SELECT * FROM venues WHERE id=?').get(+body.venueId);
+  if (!custom && !v) throw err(400, 'Mekan seç');
+  const pl = custom ? readPlace(body) : null;
+  const kind = body.kind === 'goal' ? 'goal' : 'meet';
+  let goal = '', dir = '';
+  if (kind === 'goal') {
+    goal = String(body.goal || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (goal.length < 3) throw err(400, 'Hedefi yaz (en az 3 harf)');
+    if (badText(goal)) throw err(400, 'Hedefte Jestora kurallarına aykırı bir ifade var (bahis, ceza, borç yok)');
+    dir = body.dir === 'you' ? 'you' : 'me';
+  }
   const at = +body.at; if (!at || at < now() + 600000) throw err(400, 'Zaman geçmişte olamaz');
   const phones = [...new Set((body.guests || []).map(normPhone).filter(Boolean))].filter(p => p !== me.phone).slice(0, 5);
   if (!phones.length) throw err(400, 'En az bir kişi davet et');
+  if (kind === 'goal' && phones.length !== 1) throw err(400, 'Hedef jesti tek kişiyle yapılır');
   const members = [], outsiders = [];
   phones.forEach(p => { const u = db.prepare('SELECT * FROM users WHERE phone=?').get(p); if (u) members.push(u); else outsiders.push(p); });
   // Aynı kişilere, aynı yer ve saatte daha önce davet atıldıysa yenisini açma, var olanı göster.
-  for (const ex of db.prepare("SELECT * FROM invites WHERE host_id=? AND venue_id=? AND at=? AND status='open'").all(me.id, v.id, at)) {
+  for (const ex of db.prepare("SELECT * FROM invites WHERE host_id=? AND IFNULL(venue_id,0)=? AND at=? AND status='open' AND IFNULL(kind,'meet')=? AND IFNULL(goal,'')=? AND IFNULL(place_name,'')=?").all(me.id, custom ? 0 : v.id, at, kind, goal, custom ? pl.name : '')) {
     const gIds = new Set(db.prepare('SELECT user_id FROM guests WHERE invite_id=?').all(ex.id).map(x => x.user_id));
     const pPh = new Set(db.prepare('SELECT phone FROM invite_pending WHERE invite_id=? AND used=0').all(ex.id).map(x => x.phone));
     if (members.every(u => gIds.has(u.id)) && outsiders.every(p => pPh.has(p))) return inviteView(ex, me);
@@ -201,7 +239,8 @@ R('POST', '/api/invites', ({ req, body }) => {
     const open = db.prepare("SELECT COUNT(*) c FROM invite_pending WHERE host_id=?").get(me.id).c;
     if (open + outsiders.length > LINK_LIMIT) throw err(400, 'Pilotta en fazla ' + LINK_LIMIT + ' yeni kişi davet edebilirsin.');
   }
-  const r = db.prepare('INSERT INTO invites(host_id,venue_id,at,status,created) VALUES(?,?,?,?,?)').run(me.id, v.id, at, 'open', now());
+  const r = db.prepare('INSERT INTO invites(host_id,venue_id,at,status,created,kind,goal,dir,goal_status,place_name,place_url,place_lat,place_lng) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .run(me.id, custom ? 0 : v.id, at, 'open', now(), kind, goal || null, dir || null, kind === 'goal' ? 'active' : null, custom ? pl.name : null, custom ? pl.url : null, custom ? pl.lat : null, custom ? pl.lng : null);
   members.forEach(u => db.prepare('INSERT INTO guests(invite_id,user_id,status) VALUES(?,?,?)').run(r.lastInsertRowid, u.id, 'pending'));
   outsiders.forEach(p => db.prepare('INSERT INTO invite_pending(invite_id,host_id,phone,token,created) VALUES(?,?,?,?,?)').run(r.lastInsertRowid, me.id, p, crypto.randomBytes(12).toString('hex'), now()));
   return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(r.lastInsertRowid), me);
@@ -233,12 +272,19 @@ R('POST', '/api/invites/:id/edit', ({ req, p, body }) => {
   const me = auth(req), i = myInvite(+p.id, me);
   if (i.host_id !== me.id) throw err(403, 'Yalnızca davet sahibi düzenler');
   if (i.status !== 'open') throw err(400, 'Bu davet düzenlenemez');
-  const at = body.at ? +body.at : i.at, vid = body.venueId ? +body.venueId : i.venue_id;
+  const at = body.at ? +body.at : i.at;
   if (at < now() + 600000) throw err(400, 'Zaman geçmişte olamaz');
-  if (!db.prepare('SELECT 1 FROM venues WHERE id=?').get(vid)) throw err(400, 'Mekan seç');
-  db.prepare('UPDATE invites SET at=?, venue_id=? WHERE id=?').run(at, vid, i.id);
+  if (body.place) {   // üye olmayan yere geç
+    const pl = readPlace(body);
+    db.prepare('UPDATE invites SET at=?, venue_id=0, place_name=?, place_url=?, place_lat=?, place_lng=? WHERE id=?').run(at, pl.name, pl.url, pl.lat, pl.lng, i.id);
+  } else {
+    const vid = body.venueId ? +body.venueId : i.venue_id;
+    if (vid > 0 && !db.prepare('SELECT 1 FROM venues WHERE id=?').get(vid)) throw err(400, 'Mekan seç');
+    db.prepare('UPDATE invites SET at=?, venue_id=? WHERE id=?').run(at, vid, i.id);
+  }
   db.prepare("UPDATE guests SET status='pending', proposal_at=NULL WHERE invite_id=?").run(i.id);   // herkes yeniden yanıtlar
   db.prepare('DELETE FROM scans WHERE invite_id=?').run(i.id);
+  db.prepare('DELETE FROM photos WHERE invite_id=?').run(i.id);   // yer ya da saat değişti: fotoğraf adımı baştan
   return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(i.id), me);
 });
 R('POST', '/api/invites/:id/cancel', ({ req, p }) => {
@@ -247,13 +293,95 @@ R('POST', '/api/invites/:id/cancel', ({ req, p }) => {
   if (i.status !== 'open') throw err(400, 'Geri çekilemez');
   db.prepare("UPDATE invites SET status='cancelled' WHERE id=?").run(i.id);
   db.prepare('DELETE FROM invite_pending WHERE invite_id=?').run(i.id);
+  db.prepare('DELETE FROM photos WHERE invite_id=?').run(i.id);
   return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(i.id), me);
 });
 
-// ---- QR çift onay: sahip ve en az bir kabul eden misafir mekânda okutur ----
+// ---- hedef jesti: hedef sahibi "yaptım" der, destekleyen onaylar; onaydan sonra buluşma adımları açılır ----
+R('POST', '/api/invites/:id/goal', ({ req, p, body }) => {
+  const me = auth(req), i = myInvite(+p.id, me);
+  if (i.kind !== 'goal') throw err(400, 'Bu bir hedef jesti değil');
+  if (i.status !== 'open') throw err(400, 'Bu davet artık açık değil');
+  const g = db.prepare("SELECT * FROM guests WHERE invite_id=? AND status='accepted'").get(i.id);
+  if (!g) throw err(400, 'Önce davet kabul edilmeli');
+  const achiever = i.dir === 'me' ? i.host_id : g.user_id, backer = i.dir === 'me' ? g.user_id : i.host_id;
+  const act = body.action;
+  if (act === 'claim') {
+    if (me.id !== achiever) throw err(403, 'Hedefi yalnızca hedef sahibi bildirir');
+    if (i.goal_status !== 'active') throw err(400, 'Hedef zaten bildirildi');
+    const note = String(body.note || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+    if (note && badText(note)) throw err(400, 'Notta Jestora kurallarına aykırı bir ifade var');
+    db.prepare("UPDATE invites SET goal_status='claimed', goal_note=? WHERE id=?").run(note || null, i.id);
+  } else if (act === 'approve') {
+    if (me.id !== backer) throw err(403, 'Hedefi yalnızca destekleyen onaylar');
+    if (i.goal_status !== 'claimed') throw err(400, 'Onaylanacak bir bildirim yok');
+    db.prepare("UPDATE invites SET goal_status='approved' WHERE id=?").run(i.id);
+  } else if (act === 'reopen') {
+    if (me.id !== backer) throw err(403, 'Yalnızca destekleyen geri çevirir');
+    if (i.goal_status !== 'claimed') throw err(400, 'Geri çevrilecek bildirim yok');
+    db.prepare("UPDATE invites SET goal_status='active', goal_note=NULL WHERE id=?").run(i.id);
+  } else throw err(400, 'Geçersiz işlem');
+  return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(i.id), me);
+});
+
+// ---- buluşma fotoğrafı: QR (ya da üye olmayan yerde "Buluştuk") ancak fotoğraf yüklenince açılır ----
+const inMeetWindow = i => Math.abs(now() - i.at) <= 6 * 3600000;
+function participant(i, me) {   // davet sahibi ya da daveti kabul etmiş misafir
+  if (i.host_id === me.id) return true;
+  const g = db.prepare('SELECT status FROM guests WHERE invite_id=? AND user_id=?').get(i.id, me.id);
+  return !!g && g.status === 'accepted';
+}
+R('POST', '/api/invites/:id/photo', ({ req, p, body }) => {
+  const me = auth(req), i = myInvite(+p.id, me);
+  if (i.status !== 'open') throw err(400, 'Bu davet artık açık değil');
+  if (!participant(i, me)) throw err(403, 'Önce daveti kabul et');
+  if (!db.prepare("SELECT 1 FROM guests WHERE invite_id=? AND status='accepted'").get(i.id)) throw err(400, 'Önce davet kabul edilmeli');
+  if (!goalOk(i)) throw err(400, 'Önce hedefin onaylanması gerekir');
+  if (!inMeetWindow(i)) throw err(400, 'Fotoğraf yalnızca jest saatinin 6 saat öncesi ve sonrası arasında yüklenir');
+  if (body.consent !== true) throw err(400, 'Fotoğrafın jestin tarafları ile paylaşılmasını onaylaman gerekir');
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(body.image || ''));
+  if (!m) throw err(400, 'Fotoğraf okunamadı');
+  const buf = Buffer.from(m[1], 'base64');
+  if (buf.length < 500 || buf.length > 300000) throw err(400, 'Fotoğraf çok küçük ya da çok büyük');
+  if (buf[0] !== 0xFF || buf[1] !== 0xD8) throw err(400, 'Fotoğraf geçerli değil');
+  const lat = Number(body.lat), lng = Number(body.lng), okll = body.lat != null && body.lng != null && isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  db.prepare('INSERT OR REPLACE INTO photos(invite_id,user_id,at,lat,lng,data) VALUES(?,?,?,?,?,?)').run(i.id, me.id, now(), okll ? lat : null, okll ? lng : null, m[0]);
+  return inviteView(i, me);
+});
+R('GET', '/api/invites/:id/photos', ({ req, p }) => {
+  const me = auth(req), i = myInvite(+p.id, me);
+  return { photos: db.prepare('SELECT p.user_id id,u.name,p.at,p.data image FROM photos p JOIN users u ON u.id=p.user_id WHERE p.invite_id=? ORDER BY p.at').all(i.id) };
+});
+function maybeConfirm(i, extra) {   // sahip ve en az bir kabul eden misafir okutunca / "buluştuk" deyince onaylanır
+  const hostIn = db.prepare('SELECT 1 FROM scans WHERE invite_id=? AND user_id=?').get(i.id, i.host_id);
+  const guestIn = db.prepare("SELECT 1 FROM scans s JOIN guests g ON g.invite_id=s.invite_id AND g.user_id=s.user_id WHERE s.invite_id=? AND g.status='accepted'").get(i.id);
+  let confirmed = i.status === 'confirmed';
+  if (hostIn && guestIn && !confirmed) {
+    db.prepare("UPDATE invites SET status='confirmed' WHERE id=?").run(i.id);
+    if (extra && extra.commission) db.prepare('INSERT OR IGNORE INTO commissions(invite_id,venue_id,amount,month,created) VALUES(?,?,?,?,?)').run(i.id, extra.venueId, COMMISSION, new Date().toISOString().slice(0, 7), now());
+    confirmed = true;
+  }
+  return { confirmed, hostIn: !!hostIn, guestIn: !!guestIn };
+}
+R('POST', '/api/invites/:id/met', ({ req, p }) => {   // üye olmayan yerde QR yok: fotoğraftan sonra iki taraf da "Buluştuk" der
+  const me = auth(req), i = myInvite(+p.id, me);
+  if (i.venue_id > 0) throw err(400, 'Üye mekânda QR kullanılır');
+  if (i.status === 'cancelled') throw err(400, 'Davet geri çekilmiş');
+  if (!participant(i, me)) throw err(403, 'Önce daveti kabul et');
+  if (!goalOk(i)) throw err(400, 'Önce hedefin onaylanması gerekir');
+  if (!photoCount(i.id)) throw err(400, 'Önce buluşma fotoğrafını yükle');
+  db.prepare('INSERT OR IGNORE INTO scans(invite_id,user_id,at) VALUES(?,?,?)').run(i.id, me.id, now());
+  maybeConfirm(i, null);
+  return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(i.id), me);
+});
+
+// ---- QR çift onay: sahip ve en az bir kabul eden misafir mekânda okutur (önce buluşma fotoğrafı) ----
 R('GET', '/api/invites/:id/qr', ({ req, p }) => {
   const me = auth(req), i = myInvite(+p.id, me);
+  if (i.venue_id <= 0) throw err(400, 'Bu yer Jestora üyesi değil, QR yok');
   if (i.host_id !== me.id && db.prepare('SELECT status FROM guests WHERE invite_id=? AND user_id=?').get(i.id, me.id).status !== 'accepted') throw err(403, 'Önce daveti kabul et');
+  if (!goalOk(i)) throw err(403, 'Önce hedefin onaylanması gerekir');
+  if (!photoCount(i.id)) throw err(403, 'QR için önce buluşma fotoğrafını yükle');
   const t = Math.floor(now() / 60000);              // 1 dakikalık pencere, ekran görüntüsü işe yaramaz
   const base = `${i.id}.${me.id}.${t}`;
   return { token: `${base}.${hmac(base)}`, validSeconds: 120 };
@@ -267,20 +395,15 @@ R('POST', '/api/venue/scan', ({ req, body }) => {
   if (!i || i.venue_id !== v.id) throw err(400, 'Bu davet bu mekân için değil');
   if (i.status === 'cancelled') throw err(400, 'Davet geri çekilmiş');
   if (Math.abs(now() - i.at) > 6 * 3600000) throw err(400, 'Davet saati dışında');
+  if (!goalOk(i) || !photoCount(i.id)) throw err(400, 'Buluşma fotoğrafı yüklenmemiş');
   db.prepare('INSERT OR IGNORE INTO scans(invite_id,user_id,at) VALUES(?,?,?)').run(i.id, +uid, now());
-  const hostIn = db.prepare('SELECT 1 FROM scans WHERE invite_id=? AND user_id=?').get(i.id, i.host_id);
-  const guestIn = db.prepare("SELECT 1 FROM scans s JOIN guests g ON g.invite_id=s.invite_id AND g.user_id=s.user_id WHERE s.invite_id=? AND g.status='accepted'").get(i.id);
-  let confirmed = i.status === 'confirmed';
-  if (hostIn && guestIn && !confirmed) {
-    db.prepare("UPDATE invites SET status='confirmed' WHERE id=?").run(i.id);
-    db.prepare('INSERT OR IGNORE INTO commissions(invite_id,venue_id,amount,month,created) VALUES(?,?,?,?,?)').run(i.id, v.id, COMMISSION, new Date().toISOString().slice(0, 7), now());
-    confirmed = true;
-  }
-  return { confirmed, normal: v.normal, jest: v.jest, pay: confirmed ? v.jest : v.normal, waiting: confirmed ? null : (hostIn ? 'misafir' : 'sahip') };
+  const c = maybeConfirm(i, { commission: true, venueId: v.id });
+  return { confirmed: c.confirmed, normal: v.normal, jest: v.jest, pay: c.confirmed ? v.jest : v.normal, waiting: c.confirmed ? null : (c.hostIn ? 'misafir' : 'sahip') };
 });
 R('GET', '/api/invites/:id/receipt', ({ req, p }) => {
   const me = auth(req), i = myInvite(+p.id, me);
   if (i.status !== 'confirmed') throw err(400, 'Henüz onaylanmadı');
+  if (i.venue_id <= 0) throw err(400, 'Üye olmayan yerde jest fişi yok');
   const v = db.prepare('SELECT * FROM venues WHERE id=?').get(i.venue_id);
   return { invite: i.id, venue: v.name, at: i.at, normal: v.normal, jest: v.jest, saved: v.normal - v.jest, note: 'Ödemeyi mekâna yaptın. Jestora para tutmaz.' };
 });
@@ -293,7 +416,8 @@ if (PILOT) {   // Pilot: mekân anahtarları JEST_SECRET'tan türetilir; eski de
 }
 // Üye olmayanların numaraları: davet saatinden 24 saat sonra silinir.
 const cleanPending = () => db.prepare('DELETE FROM invite_pending WHERE invite_id IN (SELECT id FROM invites WHERE at < ?)').run(now() - 86400000);
-cleanPending(); setInterval(cleanPending, 3600000).unref();
+const cleanPhotos = () => db.prepare('DELETE FROM photos WHERE invite_id IN (SELECT id FROM invites WHERE at < ?)').run(now() - PHOTO_DAYS * 86400000);
+cleanPending(); cleanPhotos(); setInterval(() => { cleanPending(); cleanPhotos(); }, 3600000).unref();
 const adminOnly = req => { if (req.headers['x-admin-key'] !== ADMIN_KEY) throw err(401, 'Yetkisiz'); };
 R('GET', '/api/admin/venues', ({ req }) => { adminOnly(req); return { venues: db.prepare('SELECT id,name,district,normal,jest,key FROM venues').all() }; });
 R('POST', '/api/admin/venues/:id/rotate', ({ req, p }) => { adminOnly(req); const k = crypto.randomBytes(12).toString('hex'); const r = db.prepare('UPDATE venues SET key=? WHERE id=?').run(k, +p.id); if (!r.changes) throw err(404, 'Mekan yok'); return { id: +p.id, key: k }; });
@@ -314,7 +438,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/')) {
       const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
       if (limited(ip, 'all', 120) || (/^\/api\/(code|verify)$/.test(url.pathname) && limited(ip, url.pathname, 10))) throw err(429, 'Çok fazla istek. Biraz bekle.');
-      let raw = ''; for await (const ch of req) { raw += ch; if (raw.length > 1e5) throw err(413, 'Çok büyük'); }
+      let raw = ''; for await (const ch of req) { raw += ch; if (raw.length > (/\/photo$/.test(url.pathname) ? 5e5 : 1e5)) throw err(413, 'Çok büyük'); }
       let body = {}; if (raw) try { body = JSON.parse(raw); } catch { throw err(400, 'Geçersiz JSON'); }
       for (const [m, re, f] of routes) {
         const mt = m === req.method && re.exec(url.pathname);
