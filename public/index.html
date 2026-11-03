@@ -162,6 +162,10 @@ body.launch #msgJ,body.launch .den{display:none!important}
 .jcard .jt{font-weight:800;line-height:1.25;overflow-wrap:anywhere}
 .jcard .jm{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 .jcard>div:last-child{min-width:0;display:flex;flex-direction:column;gap:3px}
+.jav{width:64px;height:64px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:22px;color:#0F1B3D;border:3px solid var(--orange);position:relative}
+.jbd{position:absolute;right:-8px;bottom:-8px;width:28px;height:28px;border-radius:50%;background:var(--cream);border:1px solid var(--line);display:grid;place-items:center}
+.jbd svg{width:66%;height:66%}
+.jcard.pas .jav{filter:grayscale(.75)}
 .jcard.pas{opacity:.75}
 .jcard.pas .jimg{filter:grayscale(.75)}
 .st{align-self:flex-start;font-size:12px;font-weight:800;border-radius:99px;padding:2px 10px;background:var(--chip);color:var(--fg)}
@@ -564,7 +568,7 @@ function renderFriends(){
   var box=$('fr');box.innerHTML='';var m={},order=[];
   JESTS.forEach(function(j){j.names.forEach(function(n){if(!m[n]){m[n]={n:n,c:0,live:false};order.push(n)}m[n].c++;if(j.active)m[n].live=true})});
   if(selF&&!m[selF])selF='';
-  order.forEach(function(n){
+  order.filter(function(n){return !/^Davetli \(/.test(n)}).forEach(function(n){
     var f=m[n],b=document.createElement('button');b.type='button';b.className='fb'+(f.live?' live':'');
     b.setAttribute('aria-pressed',String(selF===n));
     b.innerHTML='<div class="fa"></div><div class="fn"></div><div class="fc"></div>';

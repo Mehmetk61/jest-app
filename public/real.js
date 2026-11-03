@@ -34,12 +34,14 @@ function load(force){
     JESTS=j.invites.map(mapInv);window.JESTS=JESTS;lastLoad=Date.now();busy=false;draw()}).catch(function(){busy=false})}
 var oldRender=window.renderHome;
 function draw(){oldRender();
-  var fr=$$('fr');if(fr)fr.hidden=true;
   var hn=document.querySelector('#s7 .sub.note');
   var a=JESTS.filter(function(j){return j.active}),p=JESTS.filter(function(j){return !j.active});
-  view=homeTab==='a'?a:p;
+  view=(homeTab==='a'?a:p).filter(function(j){return !selF||j.names.indexOf(selF)>-1});
   var cards=document.querySelectorAll('#jlist .jcard');
-  cards.forEach(function(c,k){var j=view[k];if(!j)return;c.style.cursor='pointer';c.setAttribute('role','button');c.tabIndex=0;
+  cards.forEach(function(c,k){var j=view[k];if(!j)return;
+    var ic=c.querySelector('.jimg');if(ic&&!c.querySelector('.jav')){var nm=j.names[0]||'?',pend=/^Davetli \(/.test(nm);
+      var av=document.createElement('div');av.className='jav';var ini=pend?'?':(nm.replace(/[^\p{L}\s]/gu,'').trim().split(/\s+/).slice(0,2).map(function(x){return x[0]}).join('')||'?').toLocaleUpperCase('tr');
+      av.textContent=ini;av.style.background=pend?'#B8BED6':fcol(nm);ic.className='jbd';av.appendChild(ic);c.insertBefore(av,c.firstChild)}c.style.cursor='pointer';c.setAttribute('role','button');c.tabIndex=0;
     c.onclick=function(){openDetail(j.id)};c.onkeydown=function(e){if(e.key==='Enter')openDetail(j.id)}});
   var box=$$('jlist'),old=$$('rGuide');if(old)old.remove();
   var wait=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'}).length;
@@ -70,6 +72,7 @@ function openNew(){
     if(!/^5\d{9}$/.test(d)){er.textContent='Telefon 5 ile başlayan 10 haneli olmalı.';return}
     if(guests.indexOf(d)<0&&guests.length<5)guests.push(d);ph.value='';er.textContent='';rg()},'chip');
   var r1=el('div','');r1.className='row';r1.appendChild(ph);r1.appendChild(add);p.appendChild(r1);
+  if(navigator.contacts&&navigator.contacts.select){var pk=btn('Rehberden seç',function(){navigator.contacts.select(['tel'],{multiple:true}).then(function(cs){var bad=0;cs.forEach(function(c){var t=(c.tel||[]).map(function(x){return String(x).replace(/\D/g,'').replace(/^90/,'').replace(/^0/,'')}).filter(function(x){return /^5\d{9}$/.test(x)})[0];if(t&&guests.indexOf(t)<0&&guests.length<5)guests.push(t);else bad++});er.textContent=bad?'Cep numarası olmayan kişiler eklenmedi (en fazla 5 kişi).':'';rg()}).catch(function(){})},'chip');pk.style.cssText='margin:8px 0';p.appendChild(pk)}
   function rg(){gl.innerHTML='';guests.forEach(function(g,k){var c=el('button','+90 '+g+' ✕','chip');c.type='button';c.onclick=function(){guests.splice(k,1);rg()};gl.appendChild(c)})}
   p.appendChild(el('h2','Nerede?'));
   var sel=document.createElement('select');p.appendChild(sel);
