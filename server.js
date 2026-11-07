@@ -385,7 +385,12 @@ db.exec('CREATE TABLE IF NOT EXISTS feed_comment_reports(comment_id INTEGER, use
 db.exec('CREATE TABLE IF NOT EXISTS feed_blocks(user_id INTEGER, blocked_id INTEGER, PRIMARY KEY(user_id,blocked_id))');
 const ANLIK = process.env.JEST_ANLIK === '1';   // Anlık kare (5 dakikalık fotoğraf): kodda hazır, varsayılan kapalı
 try { db.exec('ALTER TABLE feed ADD COLUMN img TEXT'); } catch (e) {}
-const FEED_DAY_MAX = +process.env.JEST_AKIS_GUNLUK || 3;
+try { db.exec('ALTER TABLE feed ADD COLUMN consent_at INTEGER'); } catch (e) {}
+try { db.exec('ALTER TABLE feed ADD COLUMN consent_v TEXT'); } catch (e) {}
+const envN = (k, d) => (process.env[k] === undefined || process.env[k] === '' ? d : +process.env[k]);
+const FEED_WAIT = envN('JEST_AKIS_BEKLE', 10) * 60000, SNAP_WAIT = envN('JEST_ANLIK_BEKLE', 30) * 60000, SNAP_DAY_MAX = envN('JEST_ANLIK_GUNLUK', 6), FEED_SHOW = envN('JEST_AKIS_GORUNEN', 5);
+const waitTxt = ms => Math.max(1, Math.ceil(ms / 60000)) + ' dakika';
+const FEED_DAY_MAX = envN('JEST_AKIS_GUNLUK', 30);
 const FEED_DURS = { '10m': 600000, '3h': 3 * 3600000, '10h': 10 * 3600000, day: 24 * 3600000 };
 const endOfDay = (t = now()) => (Math.floor((t + 3 * 3600000) / 86400000) + 1) * 86400000 - 3 * 3600000;
 const feedPurge = () => { const t = now(); db.prepare('DELETE FROM feed WHERE exp<=?').run(t); db.prepare('DELETE FROM feed_reports WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_hides WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_comments WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_comment_reports WHERE comment_id NOT IN (SELECT id FROM feed_comments)').run(); };
@@ -414,9 +419,11 @@ R('POST', '/api/feed', ({ req, body }) => {
     const cap = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     if (cap) { const bd = feedBad(cap); if (bd) throw err(400, bd); }
     const t0 = now(), ds = endOfDay(t0) - 86400000;
-    if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=? AND img IS NOT NULL').get(me.id, ds).c >= FEED_DAY_MAX) throw err(429, 'Günde en fazla ' + FEED_DAY_MAX + ' anlık kare paylaşabilirsin');
+    if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=? AND img IS NOT NULL').get(me.id, ds).c >= SNAP_DAY_MAX) throw err(429, 'Günde en fazla ' + SNAP_DAY_MAX + ' anlık kare paylaşabilirsin');
+    const lastS = db.prepare('SELECT created FROM feed WHERE user_id=? AND img IS NOT NULL ORDER BY id DESC LIMIT 1').get(me.id);
+    if (lastS && t0 - lastS.created < SNAP_WAIT) throw err(429, 'Bir sonraki anlık kare için ' + waitTxt(SNAP_WAIT - (t0 - lastS.created)) + ' bekle');
     const e0 = Math.min(t0 + 5 * 60000, endOfDay(t0));
-    const r0 = db.prepare('INSERT INTO feed(user_id,text,created,exp,img) VALUES(?,?,?,?,?)').run(me.id, cap, t0, e0, m[0]);
+    const r0 = db.prepare('INSERT INTO feed(user_id,text,created,exp,img,consent_at,consent_v) VALUES(?,?,?,?,?,?,?)').run(me.id, cap, t0, e0, m[0], t0, String(body.consentV || 'v1').slice(0, 10));
     return { id: Number(r0.lastInsertRowid), exp: e0 };
   }
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
@@ -425,7 +432,11 @@ R('POST', '/api/feed', ({ req, body }) => {
   const d = FEED_DURS[body.dur]; if (!d) throw err(400, 'Süre seç');
   const t = now(), dayStart = endOfDay(t) - 86400000;
   if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=? AND img IS NULL').get(me.id, dayStart).c >= FEED_DAY_MAX) throw err(429, 'Günde en fazla ' + FEED_DAY_MAX + ' yazı paylaşabilirsin');
+  const prev = db.prepare('SELECT id,created,exp FROM feed WHERE user_id=? AND img IS NULL AND exp>? ORDER BY id DESC LIMIT 1').get(me.id, t);
+  const lastT = db.prepare('SELECT created FROM feed WHERE user_id=? AND img IS NULL ORDER BY id DESC LIMIT 1').get(me.id);
+  if (lastT && t - lastT.created < FEED_WAIT) throw err(429, 'Bir sonraki yazı için ' + waitTxt(FEED_WAIT - (t - lastT.created)) + ' bekle');
   const exp = Math.min(t + d, endOfDay(t));   // ertesi güne geçmez
+  if (prev && t > prev.created) db.prepare('UPDATE feed SET exp=? WHERE id=?').run(Math.min(prev.exp, prev.created + 24 * (t - prev.created)), prev.id);   // süre = bir sonraki yazıya kadar geçen sürenin 24 katı
   const r = db.prepare('INSERT INTO feed(user_id,text,created,exp) VALUES(?,?,?,?)').run(me.id, text, t, exp);
   return { id: Number(r.lastInsertRowid), exp };
 });
@@ -435,7 +446,10 @@ R('GET', '/api/feed', ({ req }) => {
   const blocked = new Set(db.prepare('SELECT blocked_id id FROM feed_blocks WHERE user_id=?').all(me.id).map(x => x.id));
   const hid = new Set(db.prepare('SELECT feed_id id FROM feed_hides WHERE user_id=?').all(me.id).map(x => x.id));
   const rows = db.prepare('SELECT f.*,u.name,u.phone FROM feed f JOIN users u ON u.id=f.user_id WHERE f.hidden=0 AND f.exp>? ORDER BY f.created DESC LIMIT 100').all(now())
-    .filter(f => ids.includes(f.user_id) && !blocked.has(f.user_id) && !hid.has(f.id)).slice(0, 40);
+    .filter(f => ids.includes(f.user_id) && !blocked.has(f.user_id) && !hid.has(f.id));
+  const perAuthor = new Map(), shown = [];
+  rows.forEach(f => { const n = perAuthor.get(f.user_id) || 0; if (n < FEED_SHOW) { perAuthor.set(f.user_id, n + 1); shown.push(f); } });
+  rows.length = 0; shown.slice(0, 40).forEach(f => rows.push(f));
   const myRep = new Set(db.prepare('SELECT comment_id id FROM feed_comment_reports WHERE user_id=?').all(me.id).map(x => x.id));
   const cm = id => db.prepare('SELECT c.*,u.name FROM feed_comments c JOIN users u ON u.id=c.user_id WHERE c.feed_id=? ORDER BY c.id').all(id).filter(c => !myRep.has(c.id) && !blocked.has(c.user_id));
   return { max: FEED_DAY_MAX, posts: rows.map(f => ({ id: f.id, name: f.name, mine: f.user_id === me.id, text: f.text, img: f.img || null, at: f.created, left: Math.max(1, Math.round((f.exp - now()) / 60000)), ph: f.user_id === me.id ? null : f.phone.replace(/^\+90/, ''),
