@@ -187,6 +187,10 @@ R('POST', '/api/me/delete', ({ req, body }) => {
   db.prepare('DELETE FROM sessions WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM scans WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM photos WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM daily WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM thanks WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM mygoals WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM occasions WHERE user_id=?').run(me.id);
   db.prepare("UPDATE guests SET status='declined' WHERE user_id=? AND status IN ('pending','proposed')").run(me.id);
   db.prepare("UPDATE invites SET status='cancelled' WHERE host_id=? AND status='open'").run(me.id);
   db.prepare("UPDATE users SET phone='silindi-'||id, name='Silinmiş kullanıcı', username='silindi-'||id WHERE id=?").run(me.id);
@@ -201,6 +205,81 @@ const LINK_LIMIT = +process.env.JEST_LINK_LIMIT || 5;   // pilotta üye başına
 const normTxt = t => String(t).toLocaleLowerCase('tr').replace(/[^\p{L}]/gu, '');
 const BANNED = ['bahis', 'iddia', 'kumar', 'ceza', 'kaybet', 'borç', 'borc'];
 const badText = t => BANNED.find(w => normTxt(t).includes(normTxt(w)));
+
+// ---- v14 "Bugün": sabah niyeti, öğlen fırsatları, akşam teşekkürü (kişisel; kimsenin konumu/profili gösterilmez)
+db.exec('CREATE TABLE IF NOT EXISTS daily(user_id INTEGER, day TEXT, intent TEXT, custom INTEGER DEFAULT 0, done INTEGER DEFAULT 0, PRIMARY KEY(user_id,day))');
+db.exec('CREATE TABLE IF NOT EXISTS mygoals(id INTEGER PRIMARY KEY, user_id INTEGER, text TEXT, due TEXT, done INTEGER DEFAULT 0, created INTEGER)');
+db.exec('CREATE TABLE IF NOT EXISTS occasions(id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, label TEXT, date TEXT, yearly INTEGER DEFAULT 0, created INTEGER)');
+db.exec('CREATE TABLE IF NOT EXISTS thanks(user_id INTEGER, day TEXT, n INTEGER DEFAULT 0, PRIMARY KEY(user_id,day))');
+const INTENTS = ['Bugün tanıdık birine hal hatır sor.', 'Bugün birine beklenmedik bir kahve ısmarlamayı düşün.', 'Bugün uzun zamandır konuşmadığın birine kısa bir mesaj yaz.', 'Bugün birine içten bir teşekkür et.', 'Bugün birine küçük bir hedefinde destek ol.', 'Bugün bir arkadaşına "bugün nasılsın?" diye sor.', 'Bugün ailenden birini ara.', 'Bugün bir komşuna gülümseyip selam ver.', 'Bugün iş arkadaşına çay ya da kahve ikram et.', 'Bugün birinin güzel bir işini fark edip söyle.', 'Bugün bir arkadaşını kısa bir yürüyüşe çağır.', 'Bugün kendine küçük bir jest yap: sevdiğin bir şeyi ertelemeden yap.', 'Bugün birine "iyi ki varsın" de.', 'Bugün bir arkadaşının hedefini sor ve dinle.'];
+const istDay = (t = now()) => new Date(t + 3 * 3600000).toISOString().slice(0, 10);
+const dayIdx = d => Math.floor(Date.parse(d) / 86400000);
+R('GET', '/api/today', ({ req }) => {
+  const me = auth(req), day = istDay();
+  const pick = INTENTS[(dayIdx(day) * 7 + me.id) % INTENTS.length];
+  const row = db.prepare('SELECT * FROM daily WHERE user_id=? AND day=?').get(me.id, day);
+  const days = db.prepare('SELECT day FROM daily WHERE user_id=? AND done=1 ORDER BY day DESC LIMIT 60').all(me.id).map(r => r.day);
+  let streak = 0, d = days[0] === day ? day : istDay(now() - 86400000);
+  for (let k = 0; k < 60; k++) { if (days.includes(d)) { streak++; d = istDay(Date.parse(d) - 86400000 + 3 * 3600000 * 0); } else break; }
+  const wk = now() - 7 * 86400000;
+  const met = db.prepare("SELECT COUNT(*) c FROM invites i WHERE i.status='confirmed' AND i.at>? AND (i.host_id=? OR EXISTS(SELECT 1 FROM guests g WHERE g.invite_id=i.id AND g.user_id=?))").get(wk, me.id, me.id).c;
+  const sent = db.prepare('SELECT COUNT(*) c FROM invites WHERE host_id=? AND created>?').get(me.id, wk).c;
+  const th = db.prepare('SELECT COALESCE(SUM(n),0) c FROM thanks WHERE user_id=? AND day>=?').get(me.id, istDay(now() - 6 * 86400000)).c;
+  // Sıra sende: tamamlanan buluşmalarda son ısmarlayan davet sahibidir; son seferde o ısmarladıysa sıra sende
+  const rows = db.prepare("SELECT i.at,i.host_id,g.user_id gid FROM invites i JOIN guests g ON g.invite_id=i.id WHERE i.status='confirmed' AND g.status='accepted' AND (i.host_id=? OR g.user_id=?) ORDER BY i.at DESC").all(me.id, me.id);
+  const seen = new Set(), turns = [];
+  for (const r of rows) { const other = r.host_id === me.id ? r.gid : r.host_id; if (other === me.id || seen.has(other)) continue; seen.add(other);
+    const u = db.prepare('SELECT id,name,phone FROM users WHERE id=?').get(other); if (!u || /^silindi-/.test(u.phone)) continue;
+    turns.push({ name: u.name, phone: String(u.phone).replace(/\D/g, '').replace(/^90/, '').replace(/^0/, ''), days: Math.floor((now() - r.at) / 86400000), mine: r.host_id !== me.id }); }
+  const goals = db.prepare('SELECT id,text,due,done FROM mygoals WHERE user_id=? AND (done=0 OR created>?) ORDER BY done,id DESC LIMIT 20').all(me.id, now() - 3 * 86400000);
+  const occ = db.prepare('SELECT id,name,label,date,yearly FROM occasions WHERE user_id=?').all(me.id).map(o => { let d = o.date; const t0 = Date.parse(day); let t = Date.parse(d); if (o.yearly) { const y = new Date(t0).getUTCFullYear(); t = Date.parse(y + d.slice(4)); if (t < t0) t = Date.parse((y + 1) + d.slice(4)); } return { id: o.id, name: o.name, label: o.label, date: d, left: Math.round((t - t0) / 86400000) }; }).filter(o => o.left >= 0 && o.left <= 7).sort((a, b) => a.left - b.left);
+  const occAll = db.prepare('SELECT COUNT(*) c FROM occasions WHERE user_id=?').get(me.id).c;
+  const anyInv = db.prepare('SELECT COUNT(*) c FROM invites WHERE host_id=? OR id IN (SELECT invite_id FROM guests WHERE user_id=?)').get(me.id, me.id).c;
+  return { turns: turns.slice(0, 6), goals, occasions: occ, occAll, fresh: anyInv === 0, day, intent: { text: row ? row.intent : pick, accepted: !!row, custom: !!(row && row.custom), done: !!(row && row.done) }, streak, week: { met, sent, thanks: th, intentDone: days.filter(x => x >= istDay(now() - 6 * 86400000)).length }, hour: +new Date(now() + 3 * 3600000).toISOString().slice(11, 13) };
+});
+R('POST', '/api/today/intent', ({ req, body }) => {
+  const me = auth(req), day = istDay(), a = String(body.action || '');
+  let row = db.prepare('SELECT * FROM daily WHERE user_id=? AND day=?').get(me.id, day);
+  if (a === 'accept' || a === 'custom') {
+    let t = a === 'custom' ? String(body.text || '').trim().slice(0, 100) : INTENTS[(dayIdx(day) * 7 + me.id) % INTENTS.length];
+    if (!t) throw err(400, 'Niyetini yaz');
+    if (badText(t)) throw err(400, 'Bu kelime Jestora\'da kullanılamaz');
+    db.prepare('INSERT INTO daily(user_id,day,intent,custom,done) VALUES(?,?,?,?,0) ON CONFLICT(user_id,day) DO UPDATE SET intent=excluded.intent,custom=excluded.custom,done=0').run(me.id, day, t, a === 'custom' ? 1 : 0);
+    return { ok: true };
+  }
+  if (a === 'done') {
+    if (!row) throw err(400, 'Önce niyeti kabul et');
+    db.prepare('UPDATE daily SET done=1 WHERE user_id=? AND day=?').run(me.id, day); return { ok: true };
+  }
+  throw err(400, 'Geçersiz işlem');
+});
+R('POST', '/api/mygoals', ({ req, body }) => {
+  const me = auth(req), t = String(body.text || '').trim().slice(0, 120);
+  if (t.length < 3) throw err(400, 'Hedefi yaz (en az 3 harf)');
+  if (badText(t)) throw err(400, 'Bu kelime Jestora\'da kullanılamaz');
+  if (db.prepare('SELECT COUNT(*) c FROM mygoals WHERE user_id=? AND done=0').get(me.id).c >= 10) throw err(400, 'En fazla 10 açık hedef');
+  const due = /^\d{4}-\d{2}-\d{2}$/.test(body.due || '') ? body.due : null;
+  const r = db.prepare('INSERT INTO mygoals(user_id,text,due,created) VALUES(?,?,?,?)').run(me.id, t, due, now());
+  return { ok: true, id: Number(r.lastInsertRowid) };
+});
+R('POST', '/api/mygoals/:id/done', ({ req, p }) => { const me = auth(req); db.prepare('UPDATE mygoals SET done=1 WHERE id=? AND user_id=?').run(+p.id, me.id); return { ok: true }; });
+R('POST', '/api/mygoals/:id/delete', ({ req, p }) => { const me = auth(req); db.prepare('DELETE FROM mygoals WHERE id=? AND user_id=?').run(+p.id, me.id); return { ok: true }; });
+const OCC = ['Doğum günü', 'Sınav', 'Mülakat', 'Yıl dönümü', 'Diğer'];
+R('POST', '/api/occasions', ({ req, body }) => {
+  const me = auth(req), n = String(body.name || '').trim().slice(0, 40), l = OCC.includes(body.label) ? body.label : 'Diğer';
+  if (n.length < 2) throw err(400, 'Kişinin adını yaz');
+  if (badText(n)) throw err(400, 'Bu kelime Jestora\'da kullanılamaz');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || isNaN(Date.parse(body.date))) throw err(400, 'Tarihi seç');
+  if (db.prepare('SELECT COUNT(*) c FROM occasions WHERE user_id=?').get(me.id).c >= 30) throw err(400, 'En fazla 30 özel gün');
+  db.prepare('INSERT INTO occasions(user_id,name,label,date,yearly,created) VALUES(?,?,?,?,?,?)').run(me.id, n, l, body.date, (l === 'Doğum günü' || l === 'Yıl dönümü') ? 1 : 0, now());
+  return { ok: true };
+});
+R('POST', '/api/occasions/:id/delete', ({ req, p }) => { const me = auth(req); db.prepare('DELETE FROM occasions WHERE id=? AND user_id=?').run(+p.id, me.id); return { ok: true }; });
+R('POST', '/api/today/thanks', ({ req }) => {   // yalnızca sayaç; mesajı kullanıcı kendisi gönderir
+  const me = auth(req), day = istDay();
+  db.prepare('INSERT INTO thanks(user_id,day,n) VALUES(?,?,1) ON CONFLICT(user_id,day) DO UPDATE SET n=n+1').run(me.id, day);
+  return { ok: true };
+});
 function readPlace(body) {   // üye olmayan yer: ad (zorunlu), harita bağlantısı ve koordinat (isteğe bağlı)
   const pl = body.place || {}, name = String(pl.name || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   if (name.length < 2) throw err(400, 'Yerin adını yaz');
