@@ -45,6 +45,7 @@ function tdPost(p,b){return api('POST',p,b).then(function(){tdAt=0;loadToday(tru
 function tdSec(title,sub,id){var d=el('div','');d.className='tdsec';if(id)d.id=id;d.style.cssText='background:#fff;border-radius:14px;padding:10px 12px;margin-top:8px;display:flex;flex-direction:column;gap:6px';var h=el('div',title);h.style.cssText='font-weight:800';d.appendChild(h);if(sub){var s=el('div',sub);s.style.cssText='font-size:.85em;opacity:.75';d.appendChild(s)}return d}
 function tdInp(ph,lab,type,max){var i=document.createElement('input');i.type=type||'text';if(max)i.maxLength=max;i.placeholder=ph;i.setAttribute('aria-label',lab);i.style.cssText='width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd';return i}
 function tdRow(){var r=el('div','');r.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';return r}
+function renderTodayForce(){loadToday(true)}
 function newWith(pre){if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openNew(pre)})}else openNew(pre)}
 window.jestOpenNew=newWith;
 function wa(msg){if(navigator.share){navigator.share({text:msg}).catch(function(){})}else{window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}}
@@ -79,18 +80,18 @@ function renderToday(){
     if(!g.done){r.appendChild(btn('Bitirdim',function(){tdPost('/api/mygoals/'+g.id+'/done')},'chip'));r.appendChild(btn('Arkadaşımla paylaş',function(){newWith({kind:'goal',goal:g.text})},'chip'))}
     r.appendChild(btn('Sil',function(){tdPost('/api/mygoals/'+g.id+'/delete')},'chip'));sG.appendChild(r)});
   var gi=tdInp('Yeni hedef, örn. Haftada 3 kere yürümek','Yeni hedef','text',120),gd=tdInp('Bitiş tarihi','Hedef bitiş tarihi','date');gd.min=new Date().toISOString().slice(0,10);
-  var gr=tdRow();gr.appendChild(gd);gr.appendChild(btn('Hedef ekle',function(){if(!gi.value.trim()){gi.focus();return}tdPost('/api/mygoals',{text:gi.value.trim(),due:gd.value||null}).catch(function(e){alert(e.message)})},'chip'));
+  var gr=tdRow();gr.appendChild(gd);gr.appendChild(btn('Hedef ekle',function(){if(!gi.value.trim()){gi.focus();return}api('POST','/api/mygoals',{text:gi.value.trim(),due:gd.value||null}).then(function(){gi.value='';gd.value='';tdAt=0;renderTodayForce()}).catch(function(e){alert(e.message)})},'chip'));
   sG.appendChild(gi);sG.appendChild(gr);
   // 4) özel günler
-  var sO=tdSec('Özel günler','Doğum günü, sınav, mülakat: yaklaşınca burada görünür','tdOzel');
-  TD.occasions.forEach(function(o){var r=tdRow();var when=o.left===0?'bugün':(o.left===1?'yarın':o.left+' gün sonra');var ot=el('div',o.name+' · '+o.label+': '+when);ot.style.cssText='flex:1;min-width:9rem;font-weight:700';r.appendChild(ot);
-    r.appendChild(btn('Jest davet et',function(){newWith({kind:'meet'})},'chip'));
-    r.appendChild(btn('Mesaj gönder',function(){wa(o.name+', '+(o.label==='Doğum günü'?'doğum günün kutlu olsun!':o.label==='Sınav'?'sınavında başarılar!':o.label==='Mülakat'?'mülakatında başarılar!':'özel günün kutlu olsun!')+' Küçük bir jest benden. (Jestora)')},'chip'));
+  var sO=tdSec('Özel günler','Eklediğin günler burada listelenir. 7 gün kala kalın yazılır ve mesaj gönderebilirsin','tdOzel');
+  TD.occasions.forEach(function(o){var r=tdRow();var when=o.left===0?'bugün':(o.left===1?'yarın':o.left+' gün sonra');var dd=o.date.slice(8)+'.'+o.date.slice(5,7)+'.'+o.date.slice(0,4);var ot=el('div',o.name+' · '+o.label+' · '+dd+' ('+when+')');ot.style.cssText='flex:1;min-width:9rem;font-weight:'+(o.left<=7?'800':'500');r.appendChild(ot);
+    if(o.left<=7){r.appendChild(btn('Jest davet et',function(){newWith({kind:'meet'})},'chip'));
+    r.appendChild(btn('Mesaj gönder',function(){wa(o.name+', '+(o.label==='Doğum günü'?'doğum günün kutlu olsun!':o.label==='Sınav'?'sınavında başarılar!':o.label==='Mülakat'?'mülakatında başarılar!':'özel günün kutlu olsun!')+' Küçük bir jest benden. (Jestora)')},'chip'))}
     r.appendChild(btn('Sil',function(){tdPost('/api/occasions/'+o.id+'/delete')},'chip'));sO.appendChild(r)});
-  if(!TD.occasions.length&&TD.occAll)sO.appendChild(el('div','Önümüzdeki 7 günde özel gün yok.'));
+  if(!TD.occasions.length)sO.appendChild(el('div','Henüz özel gün eklemedin. Aşağıdan ekleyebilirsin.'));
   var on=tdInp('Kişi','Özel gün için kişi adı','text',40),ol=document.createElement('select');ol.setAttribute('aria-label','Özel gün türü');ol.style.cssText='padding:10px;border-radius:10px;border:1px solid #ddd';['Doğum günü','Sınav','Mülakat','Yıl dönümü','Diğer'].forEach(function(x){var o=document.createElement('option');o.textContent=x;ol.appendChild(o)});
   var od=tdInp('Tarih','Özel gün tarihi','date');var orr=tdRow();orr.appendChild(ol);orr.appendChild(od);
-  sO.appendChild(on);sO.appendChild(orr);sO.appendChild(btn('Özel gün ekle',function(){if(!on.value.trim()){on.focus();return}tdPost('/api/occasions',{name:on.value.trim(),label:ol.value,date:od.value}).catch(function(e){alert(e.message)})},'chip'));
+  sO.appendChild(on);sO.appendChild(orr);sO.appendChild(btn('Özel gün ekle',function(){if(!on.value.trim()){on.focus();return}api('POST','/api/occasions',{name:on.value.trim(),label:ol.value,date:od.value}).then(function(){on.value='';od.value='';tdAt=0;renderTodayForce()}).catch(function(e){alert(e.message)})},'chip'));
   // 5) teşekkür
   var sK=tdSec('Günün teşekkürü','Bugün seni güldüren, yardım eden birine kısa bir teşekkür gönder','tdTesekkur');
   var who=tdInp('Kime? (isim)','Teşekkür edeceğin kişi','text',40),nt=tdInp('Neyi için teşekkür ediyorsun?','Teşekkür notu','text',120);sK.appendChild(who);sK.appendChild(nt);
