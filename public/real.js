@@ -34,6 +34,67 @@ function load(force){
   busy=true;
   return api('GET','/api/invites').then(function(j){
     JESTS=j.invites.map(mapInv);window.JESTS=JESTS;lastLoad=Date.now();busy=false;draw()}).catch(function(){busy=false})}
+
+// ---- v14 Bugün: niyet+seri, Sıra sende, kendine hedef, özel gün, teşekkür
+var TD=null,tdAt=0,tdBusy=false;
+function loadToday(force){if(tdBusy||(!force&&TD&&Date.now()-tdAt<60000))return;tdBusy=true;api('GET','/api/today').then(function(j){TD=j;tdAt=Date.now();tdBusy=false;renderToday()}).catch(function(){tdBusy=false})}
+function tdPost(p,b){return api('POST',p,b).then(function(){tdAt=0;loadToday(true)})}
+function tdSec(title,sub,id){var d=el('div','');d.className='tdsec';if(id)d.id=id;d.style.cssText='background:#fff;border-radius:14px;padding:10px 12px;margin-top:8px;display:flex;flex-direction:column;gap:6px';var h=el('div',title);h.style.cssText='font-weight:800';d.appendChild(h);if(sub){var s=el('div',sub);s.style.cssText='font-size:.85em;opacity:.75';d.appendChild(s)}return d}
+function tdInp(ph,lab,type,max){var i=document.createElement('input');i.type=type||'text';if(max)i.maxLength=max;i.placeholder=ph;i.setAttribute('aria-label',lab);i.style.cssText='width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd';return i}
+function tdRow(){var r=el('div','');r.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';return r}
+function newWith(pre){if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openNew(pre)})}else openNew(pre)}
+window.jestOpenNew=newWith;
+function wa(msg){if(navigator.share){navigator.share({text:msg}).catch(function(){})}else{window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}}
+function renderToday(){
+  var old=$$('rToday');if(old)old.remove();var box=$$('jlist');if(!box||!TD)return;
+  var c=el('div','');c.id='rToday';c.className='card';c.style.cssText='background:#FFF0DB;border-radius:16px;padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column';
+  var top=el('div','Bugün');top.style.cssText='font-weight:900;font-size:1.1em';c.appendChild(top);
+  var sub=el('div',(TD.streak?TD.streak+' günlük niyet serin var. ':'')+'Küçük bir jest, güzel bir gün.');sub.style.cssText='font-size:.85em;opacity:.75';c.appendChild(sub);
+  // 1) niyet
+  var I=TD.intent,sI=tdSec('Günün niyeti',I.accepted?'Kabul ettin':'Sana bir öneri','tdNiyet');
+  var tx=el('div',I.text);tx.style.cssText='font-weight:700';sI.appendChild(tx);
+  var row=tdRow();
+  if(!I.accepted){row.appendChild(btn('Kabul et',function(){tdPost('/api/today/intent',{action:'accept'})},'chip'));
+    row.appendChild(btn('Kendim yazayım',function(){var v=prompt('Bugünkü niyetin?');if(v)tdPost('/api/today/intent',{action:'custom',text:v}).catch(function(e){alert(e.message)})},'chip'))}
+  else if(!I.done){row.appendChild(btn('Yaptım',function(){tdPost('/api/today/intent',{action:'done'})},'chip'))}
+  else{var ok=el('div','Yaptın, teşekkürler.');ok.style.cssText='font-weight:800';row.appendChild(ok)}
+  sI.appendChild(row);
+  // 2) Sıra sende
+  var sT=tdSec('Sıra sende','Son buluşmada kim ısmarladıysa sıra karşıdadır','tdSira');
+  var mine=TD.turns.filter(function(t){return t.mine}),theirs=TD.turns.filter(function(t){return !t.mine});
+  if(TD.fresh||!TD.turns.length){sT.appendChild(el('div',TD.fresh?'İlk jestini 60 saniyede gönder. Bir şablon seç:':'Henüz tamamlanmış jestin yok. Bir arkadaşını davet et:'));
+    var tr=tdRow();
+    tr.appendChild(btn('Kahve jesti',function(){newWith({kind:'meet'})},'chip'));tr.appendChild(btn('Çay jesti',function(){newWith({kind:'meet'})},'chip'));tr.appendChild(btn('Hedef jesti',function(){newWith({kind:'goal'})},'chip'));sT.appendChild(tr)}
+  mine.forEach(function(t){var r=tdRow();var tt=el('div','Sıra sende: '+t.name+' ('+t.days+' gün önce o ısmarladı)');tt.style.cssText='flex:1;min-width:10rem;font-weight:700';r.appendChild(tt);r.appendChild(btn('Davet et',function(){newWith({kind:'meet',guest:t.phone})},'chip'));sT.appendChild(r)});
+  theirs.forEach(function(t){var r=el('div','Sıra onda: '+t.name+' (en son sen ısmarladın)');r.style.cssText='font-size:.9em;opacity:.8';sT.appendChild(r)});
+  // 3) hedeflerim
+  var sG=tdSec('Hedeflerim','Yalnızca sana özel. İstersen bir arkadaşınla hedef jestine çevir','tdHedef');
+  TD.goals.forEach(function(g){var r=tdRow();var gt=el('div',(g.done?'✓ ':'')+g.text+(g.due?' · '+g.due.slice(8)+'.'+g.due.slice(5,7):''));gt.style.cssText='flex:1;min-width:9rem;'+(g.done?'text-decoration:line-through;opacity:.6':'font-weight:700');r.appendChild(gt);
+    if(!g.done){r.appendChild(btn('Bitirdim',function(){tdPost('/api/mygoals/'+g.id+'/done')},'chip'));r.appendChild(btn('Arkadaşımla paylaş',function(){newWith({kind:'goal',goal:g.text})},'chip'))}
+    r.appendChild(btn('Sil',function(){tdPost('/api/mygoals/'+g.id+'/delete')},'chip'));sG.appendChild(r)});
+  var gi=tdInp('Yeni hedef, örn. Haftada 3 kere yürümek','Yeni hedef','text',120),gd=tdInp('Bitiş tarihi','Hedef bitiş tarihi','date');gd.min=new Date().toISOString().slice(0,10);
+  var gr=tdRow();gr.appendChild(gd);gr.appendChild(btn('Hedef ekle',function(){if(!gi.value.trim()){gi.focus();return}tdPost('/api/mygoals',{text:gi.value.trim(),due:gd.value||null}).catch(function(e){alert(e.message)})},'chip'));
+  sG.appendChild(gi);sG.appendChild(gr);
+  // 4) özel günler
+  var sO=tdSec('Özel günler','Doğum günü, sınav, mülakat: yaklaşınca burada görünür','tdOzel');
+  TD.occasions.forEach(function(o){var r=tdRow();var when=o.left===0?'bugün':(o.left===1?'yarın':o.left+' gün sonra');var ot=el('div',o.name+' · '+o.label+': '+when);ot.style.cssText='flex:1;min-width:9rem;font-weight:700';r.appendChild(ot);
+    r.appendChild(btn('Jest davet et',function(){newWith({kind:'meet'})},'chip'));
+    r.appendChild(btn('Mesaj gönder',function(){wa(o.name+', '+(o.label==='Doğum günü'?'doğum günün kutlu olsun!':o.label==='Sınav'?'sınavında başarılar!':o.label==='Mülakat'?'mülakatında başarılar!':'özel günün kutlu olsun!')+' Küçük bir jest benden. (Jestora)')},'chip'));
+    r.appendChild(btn('Sil',function(){tdPost('/api/occasions/'+o.id+'/delete')},'chip'));sO.appendChild(r)});
+  if(!TD.occasions.length&&TD.occAll)sO.appendChild(el('div','Önümüzdeki 7 günde özel gün yok.'));
+  var on=tdInp('Kişi','Özel gün için kişi adı','text',40),ol=document.createElement('select');ol.setAttribute('aria-label','Özel gün türü');ol.style.cssText='padding:10px;border-radius:10px;border:1px solid #ddd';['Doğum günü','Sınav','Mülakat','Yıl dönümü','Diğer'].forEach(function(x){var o=document.createElement('option');o.textContent=x;ol.appendChild(o)});
+  var od=tdInp('Tarih','Özel gün tarihi','date');var orr=tdRow();orr.appendChild(ol);orr.appendChild(od);
+  sO.appendChild(on);sO.appendChild(orr);sO.appendChild(btn('Özel gün ekle',function(){if(!on.value.trim()){on.focus();return}tdPost('/api/occasions',{name:on.value.trim(),label:ol.value,date:od.value}).catch(function(e){alert(e.message)})},'chip'));
+  // 5) teşekkür
+  var sK=tdSec('Günün teşekkürü','Bugün seni güldüren, yardım eden birine kısa bir teşekkür gönder','tdTesekkur');
+  var who=tdInp('Kime? (isim)','Teşekkür edeceğin kişi','text',40),nt=tdInp('Neyi için teşekkür ediyorsun?','Teşekkür notu','text',120);sK.appendChild(who);sK.appendChild(nt);
+  var kr=tdRow();kr.appendChild(btn('WhatsApp ile gönder',function(){var n=nt.value.trim();if(!n){nt.focus();return}var msg=(who.value.trim()?who.value.trim()+', ':'')+n+' için teşekkür ederim. Küçük bir jest benden. (Jestora)';
+    api('POST','/api/today/thanks').then(function(){tdAt=0;loadToday(true)}).catch(function(){});wa(msg);nt.value=''},'chip'));sK.appendChild(kr);
+  var W=TD.week;var sS=tdSec('Bu hafta','Yalnızca sana özel');
+  sS.appendChild(el('div','Tamamlanan buluşma: '+W.met+' · Gönderilen davet: '+W.sent+' · Teşekkür: '+W.thanks+' · Niyet: '+W.intentDone+'/7'));
+  var h=TD.hour,order=h<12?[sI,sT,sG,sO,sK,sS]:(h<17?[sT,sI,sG,sO,sK,sS]:[sK,sT,sI,sO,sG,sS]);
+  order.forEach(function(x){c.appendChild(x)});
+  box.parentNode.insertBefore(c,box)}
 var oldRender=window.renderHome;
 function draw(){oldRender();
   var hn=document.querySelector('#s7 .sub.note');
@@ -45,6 +106,7 @@ function draw(){oldRender();
       var av=document.createElement('div');av.className='jav';var ini=pend?'?':(nm.replace(/[^\p{L}\s]/gu,'').trim().split(/\s+/).slice(0,2).map(function(x){return x[0]}).join('')||'?').toLocaleUpperCase('tr');
       av.textContent=ini;av.style.background=pend?'#B8BED6':fcol(nm);ic.className='jbd';av.appendChild(ic);c.insertBefore(av,c.firstChild)}c.style.cursor='pointer';c.setAttribute('role','button');c.tabIndex=0;
     c.onclick=function(){openDetail(j.id)};c.onkeydown=function(e){if(e.key==='Enter')openDetail(j.id)}});
+  loadToday();renderToday();
   var box=$$('jlist'),old=$$('rGuide');if(old)old.remove();
   var wait=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'}).length;
   if(wait){var w=el('div','');w.id='rGuide';w.className='card';w.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin-bottom:10px;font-weight:800';w.textContent='Yanıtını bekleyen '+wait+' davetin var. Açmak için dokun.';w.style.cursor='pointer';w.setAttribute('role','button');w.tabIndex=0;var wj=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'})[0];w.onclick=function(){if(wj)openDetail(wj.id)};w.onkeydown=function(e){if(e.key==='Enter'&&wj)openDetail(wj.id)};box.parentNode.insertBefore(w,box)}
@@ -94,13 +156,13 @@ function placePicker(p,init){
     if(!navigator.geolocation){info.textContent='Bu cihaz konum vermiyor. Yer adını yaz.';return}
     geo.disabled=true;info.textContent='Konum aranıyor…';
     navigator.geolocation.getCurrentPosition(function(pos){geo.disabled=false;st.lat=+pos.coords.latitude.toFixed(5);st.lng=+pos.coords.longitude.toFixed(5);
-      if(!st.name){st.name='Bulunduğum konum';inp.value=st.name}
+      if(!st.name){st.name='Bulunduğum konum';inp.value=st.name;auto=true;setTimeout(function(){inp.focus();inp.select()},50)}
       info.textContent='Konum alındı: '+st.lat+', '+st.lng+(pos.coords.accuracy?' (yaklaşık '+Math.round(pos.coords.accuracy)+' m)':'')+'. Yerin adını düzeltebilirsin.';upd()},
       function(){geo.disabled=false;info.textContent='Konum izni verilmedi. Yer adını yazabilir ya da Haritalar bağlantısı yapıştırabilirsin.'},{enableHighAccuracy:false,timeout:8000,maximumAge:60000})},'chip');box.appendChild(geo);
   var info=el('p','1) Yer adını yaz. 2) Haritada ara ile kontrol et. İstersen Haritalar\'daki uzun bağlantıyı buraya yapıştır, yer adı otomatik gelir. Üye olmayan yerde normal ödeme geçerli, jest indirimi olmaz.','sub');info.style.fontSize='13px';box.appendChild(info);
-  var st={name:'',url:'',lat:null,lng:null};
+  var st={name:'',url:'',lat:null,lng:null};var auto=false;
   function upd(){var q=st.name&&!st.url?st.name:(st.lat!=null?st.lat+','+st.lng:'kafe yakınımda');find.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q)}
-  inp.oninput=function(){var r=parseMaps(inp.value);st.name=r.name;st.url=r.url;if(r.url){st.lat=r.lat;st.lng=r.lng}
+  inp.onfocus=function(){if(auto)inp.select()};inp.oninput=function(){auto=false;var r=parseMaps(inp.value);st.name=r.name;st.url=r.url;if(r.url){st.lat=r.lat;st.lng=r.lng}
     if(r.note)info.textContent=r.note;else if(r.url)info.textContent='Seçilen: '+r.name+(r.lat!=null?' · koordinat alındı':'');upd()};
   function show(){box.style.display=sel.value==='0'?'flex':'none'}
   sel.onchange=show;upd();
@@ -120,7 +182,7 @@ function goalLine(i){var ach=i.dir==='me'?i.host.name:((i.guests[0]&&i.guests[0]
 function mapsLink(v){if(v.url)return v.url;if(v.lat!=null&&v.lng!=null)return 'https://www.google.com/maps/search/?api=1&query='+v.lat+','+v.lng;return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(v.name)}
 
 // ---- yeni davet ----
-function openNew(){
+function openNew(pre){
   var O=overlay(),p=O.p,guests=[],kind='meet',dir='me';
   p.appendChild(el('h2','Yeni jest daveti'));
   var kr=el('div','');kr.className='row';p.appendChild(kr);
@@ -149,6 +211,7 @@ function openNew(){
   var tl2=el('h2','Ne zaman?');p.appendChild(tl2);
   var dt=document.createElement('input');dt.type='datetime-local';var d0=new Date();d0.setDate(d0.getDate()+1);d0.setHours(15,0,0,0);dt.value=dtl(d0);dt.min=dtl(Date.now()+900000);p.appendChild(dt);
   var er=errBox();p.appendChild(er);setKind('meet');
+  if(pre){if(pre.kind==='goal')setKind('goal');if(pre.goal)gi.value=pre.goal;if(pre.guest&&/^5\d{9}$/.test(pre.guest)){guests.push(pre.guest);rg()}}
   var go2=btn('Daveti gönder',function(){
     if(ph.value.trim())add.onclick();if(!guests.length){er.textContent='En az bir kişi ekle.';return}
     if(kind==='goal'&&gi.value.trim().length<3){er.textContent='Hedefi yaz (en az 3 harf).';return}
@@ -161,6 +224,27 @@ function openNew(){
   p.appendChild(go2);p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'));
 }
 
+// jest kartı: tamamlanan jestin paylaşılabilir görseli (fotoğraf içermez)
+function cardCanvas(i){
+  var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
+  var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#FFE9D3');g.addColorStop(1,'#FFB878');x.fillStyle=g;x.fillRect(0,0,W,H);
+  function first(n){return String(n||'').trim().split(/\s+/)[0]}
+  function wrap(t,mx,fs,y,lh){x.font='800 '+fs+'px system-ui,sans-serif';var w=String(t).split(' '),ln='';w.forEach(function(k){var tt=ln?ln+' '+k:k;if(x.measureText(tt).width>mx&&ln){x.fillText(ln,W/2,y);y+=lh;ln=k}else ln=tt});x.fillText(ln,W/2,y);return y+lh}
+  x.textAlign='center';x.fillStyle='#0F1B3D';
+  x.font='900 64px system-ui,sans-serif';x.fillText('Bir jest yaptık',W/2,250);
+  var names=[first(i.host.name)].concat(i.guests.filter(function(g){return g.status==='accepted'}).map(function(g){return first(g.name)}));
+  var y=wrap(names.join(' + '),900,96,470,116);
+  if(i.kind==='goal'&&i.goal){x.font='700 52px system-ui,sans-serif';y=wrap('Hedef: '+i.goal,880,52,y+40,70)}
+  x.font='700 46px system-ui,sans-serif';y=wrap(i.venue.name,880,46,y+50,62);
+  var d=new Date(i.at);x.font='600 44px system-ui,sans-serif';x.fillText(d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear(),W/2,y+30);
+  x.font='900 72px system-ui,sans-serif';x.fillStyle='#FF7A1A';x.fillText('Jestora',W/2,H-170);
+  x.font='600 36px system-ui,sans-serif';x.fillStyle='#0F1B3D';x.fillText('Küçük bir jest, güzel bir gün.',W/2,H-110);
+  return c}
+function shareCard(i){var c=cardCanvas(i);
+  c.toBlob(function(b){if(!b)return;var f;try{f=new File([b],'jestora-jest.png',{type:'image/png'})}catch(e){f=null}
+    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],text:'Jestora ile bir jest yaptık.'}).catch(function(){})}
+    else{var O=overlay(),p=O.p;p.appendChild(el('h2','Jest kartın'));var im=document.createElement('img');im.src=URL.createObjectURL(b);im.alt='Jest kartı';im.style.cssText='width:100%;border-radius:16px';im.id='cardImg';p.appendChild(im);p.appendChild(el('p','Görsele uzun basıp kaydedebilir, sonra paylaşabilirsin.','sub'));p.appendChild(btn('Kapat',function(){close(O.o)},'chip'))}},'image/png')}
+window.jestCardCanvas=cardCanvas;
 // ---- ayrıntı ----
 function openDetail(id){
   if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openDetail(id)});return}
@@ -172,6 +256,7 @@ function openDetail(id){
     p.appendChild(el('p',fmt(i.at),'big'));
     p.appendChild(el('p',cu?'Üye olmayan yer: normal ödeme geçerli, jest indirimi yok. Jestora para tutmaz.':'Normal fiyat '+tl(i.venue.normal)+', jest fiyatı '+tl(i.venue.jest)+'. Ödeme mekânda yapılır, Jestora para tutmaz.','sub'));
     p.appendChild(el('div','Davet sahibi: '+i.host.name+(i.role==='host'?' (sen)':'')));
+    if(i.status==='confirmed'){var cb=btn('Jest kartı paylaş',function(){shareCard(i)},'chip');cb.id='cardBtn';p.appendChild(cb)}
     var mine=i.guests.filter(function(g){return g.id===me.id})[0];
     var anyAcc=i.guests.some(function(g){return g.status==='accepted'});
     var im=function(){return i.role==='host'||(mine&&mine.status==='accepted')};
