@@ -5,6 +5,9 @@ window.JESTS=[];
 var st=document.createElement('style');
 st.textContent='.rov{position:fixed;inset:0;background:rgba(15,27,61,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center}.rpn{background:#FFF6EC;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:20px 20px 28px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}.rpn h2{margin:0}.rpn input,.rpn select{width:100%;box-sizing:border-box;padding:12px;border-radius:14px;border:2px solid #E8DCCB;font:inherit;background:#fff}.rpn .row{display:flex;gap:8px;flex-wrap:wrap}.rpn .qrb{background:#fff;border-radius:16px;padding:8px;align-self:center;max-width:280px}.rpn .qrb svg{width:100%;height:auto;display:block}.rpn .big{font-size:22px;font-weight:800}.rpn .okb{background:#E7F8EF;border-radius:14px;padding:12px}.rpn .gl{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #EADFCF}';
 document.head.appendChild(st);
+var st2=document.createElement('style');
+st2.textContent='#rToday,.rpn{color:#0F1B3D;color-scheme:light}:is(#rToday,.rpn) :is(h2,h3,b,p,div,span,label){color:#0F1B3D}:is(#rToday,.rpn) .sub{color:#4A5578}:is(#rToday,.rpn) :is(input,select,textarea){background:#fff;color:#0F1B3D;border:1px solid #C9CFE0;color-scheme:light}:is(#rToday,.rpn) .chip{background:#FFE0C2;color:#0F1B3D}:is(#rToday,.rpn) .err{color:#B3261E}#rToday a,.rpn a{color:#C2570A}';
+document.head.appendChild(st2);
 function $$(id){return document.getElementById(id)}
 function fmt(ts){var d=new Date(ts);return d.getDate()+' '+MONTHS[d.getMonth()]+' '+DAYS[d.getDay()]+' · '+pad(d.getHours())+':'+pad(d.getMinutes())}
 function tl(n){return n+' TL'}
