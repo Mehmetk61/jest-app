@@ -169,7 +169,7 @@ R('POST', '/api/verify', async ({ body }) => {
   db.prepare('INSERT INTO sessions(token,user_id,created) VALUES(?,?,?)').run(token, u.id, now());
   return { token, user: pubUser(u) };
 });
-R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT, mekan: MEKAN }));
+R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT, mekan: MEKAN, push: PUSH }));
 R('GET', '/api/link/:token', ({ p }) => {   // davet linkine tıklayan, kayıt olmadan önce davetin özetini görür
   const r = db.prepare('SELECT * FROM invite_pending WHERE token=? AND used=0').get(p.token);
   if (!r) throw err(404, 'Davet linki geçersiz ya da daha önce kullanılmış');
@@ -192,6 +192,7 @@ R('POST', '/api/me/delete', ({ req, body }) => {
   db.prepare('DELETE FROM thanks WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM mygoals WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM occasions WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM feed WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_blocks WHERE user_id=? OR blocked_id=?').run(me.id, me.id); db.prepare('DELETE FROM feed_hides WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_reports WHERE user_id=?').run(me.id); db.prepare('DELETE FROM push_subs WHERE user_id=?').run(me.id); db.prepare('DELETE FROM push_log WHERE user_id=?').run(me.id);
   db.prepare("UPDATE guests SET status='declined' WHERE user_id=? AND status IN ('pending','proposed')").run(me.id);
   db.prepare("UPDATE invites SET status='cancelled' WHERE host_id=? AND status='open'").run(me.id);
   db.prepare("UPDATE users SET phone='silindi-'||id, name='Silinmiş kullanıcı', username='silindi-'||id WHERE id=?").run(me.id);
@@ -204,7 +205,7 @@ R('GET', '/api/venues', () => ({ venues: MEKAN ? db.prepare('SELECT id,name,dist
 // ---- davetler ----
 const LINK_LIMIT = +process.env.JEST_LINK_LIMIT || 5;   // pilotta üye başına, henüz üye olmayan en fazla kaç kişi davet edilebilir
 const normTxt = t => String(t).toLocaleLowerCase('tr').replace(/[^\p{L}]/gu, '');
-const BANNED = ['bahis', 'iddia', 'kumar', 'ceza', 'kaybet', 'borç', 'borc'];
+const BANNED = ['bahis', 'iddia', 'iddaa', 'kumar', 'casino', 'kazino', 'poker', 'rulet', 'ceza', 'kaybet', 'borç', 'borc'];
 const badText = t => BANNED.find(w => normTxt(t).includes(normTxt(w)));
 
 // ---- v14 "Bugün": sabah niyeti, öğlen fırsatları, akşam teşekkürü (kişisel; kimsenin konumu/profili gösterilmez)
@@ -323,8 +324,120 @@ R('POST', '/api/invites', ({ req, body }) => {
   const r = db.prepare('INSERT INTO invites(host_id,venue_id,at,status,created,kind,goal,dir,goal_status,place_name,place_url,place_lat,place_lng) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .run(me.id, custom ? 0 : v.id, at, 'open', now(), kind, goal || null, dir || null, kind === 'goal' ? 'active' : null, custom ? pl.name : null, custom ? pl.url : null, custom ? pl.lat : null, custom ? pl.lng : null);
   members.forEach(u => db.prepare('INSERT INTO guests(invite_id,user_id,status) VALUES(?,?,?)').run(r.lastInsertRowid, u.id, 'pending'));
+  members.forEach(u => notify(u.id, 'Yeni jest daveti', me.name + (kind === 'goal' ? ' bir hedef jestine seni davet etti.' : ' seni bir jeste davet etti.')));
   outsiders.forEach(p => db.prepare('INSERT INTO invite_pending(invite_id,host_id,phone,token,created) VALUES(?,?,?,?,?)').run(r.lastInsertRowid, me.id, p, crypto.randomBytes(12).toString('hex'), now()));
   return inviteView(db.prepare('SELECT * FROM invites WHERE id=?').get(r.lastInsertRowid), me);
+});
+
+// ---- Bildirim (web push, yükü yok): içerik sunucuda bekler, telefon kendi çeker. Haftada en fazla PUSH_WEEK.
+const VAPID_PUB = process.env.JEST_VAPID_PUB || '', VAPID_PRIV = process.env.JEST_VAPID_PRIV || '';
+const PUSH = !!(VAPID_PUB && VAPID_PRIV);
+const PUSH_WEEK = +process.env.JEST_PUSH_HAFTA || 3;
+db.exec('CREATE TABLE IF NOT EXISTS push_subs(endpoint TEXT PRIMARY KEY, user_id INTEGER, created INTEGER)');
+db.exec('CREATE TABLE IF NOT EXISTS push_queue(id INTEGER PRIMARY KEY, endpoint TEXT, title TEXT, body TEXT, created INTEGER)');
+db.exec('CREATE TABLE IF NOT EXISTS push_log(user_id INTEGER, at INTEGER)');
+const b64u = b => Buffer.from(b).toString('base64url');
+function vapidHeader(endpoint) {
+  const aud = new URL(endpoint).origin;
+  const h = b64u(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
+  const c = b64u(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'mailto:appjestora@gmail.com' }));
+  const pub = Buffer.from(VAPID_PUB, 'base64url');
+  const key = crypto.createPrivateKey({ key: { kty: 'EC', crv: 'P-256', d: VAPID_PRIV, x: b64u(pub.subarray(1, 33)), y: b64u(pub.subarray(33, 65)) }, format: 'jwk' });
+  const sig = crypto.sign('sha256', Buffer.from(h + '.' + c), { key, dsaEncoding: 'ieee-p1363' });
+  return 'vapid t=' + h + '.' + c + '.' + b64u(sig) + ', k=' + VAPID_PUB;
+}
+const pushSender = { fn: (endpoint) => fetch(endpoint, { method: 'POST', headers: { Authorization: vapidHeader(endpoint), TTL: '86400', 'Content-Length': '0' } }) };
+function notify(userId, title, body) {
+  if (!PUSH) return false;
+  const week = db.prepare('SELECT COUNT(*) c FROM push_log WHERE user_id=? AND at>?').get(userId, now() - 7 * 86400000).c;
+  if (week >= PUSH_WEEK) return false;
+  const subs = db.prepare('SELECT endpoint FROM push_subs WHERE user_id=?').all(userId);
+  if (!subs.length) return false;
+  db.prepare('INSERT INTO push_log(user_id,at) VALUES(?,?)').run(userId, now());
+  subs.forEach(sb => {
+    db.prepare('INSERT INTO push_queue(endpoint,title,body,created) VALUES(?,?,?,?)').run(sb.endpoint, title, body, now());
+    Promise.resolve().then(() => pushSender.fn(sb.endpoint)).then(r => { if (r && (r.status === 404 || r.status === 410)) db.prepare('DELETE FROM push_subs WHERE endpoint=?').run(sb.endpoint); }).catch(() => {});
+  });
+  return true;
+}
+R('GET', '/api/push/key', () => ({ key: PUSH ? VAPID_PUB : null }));
+R('POST', '/api/push/subscribe', ({ req, body }) => {
+  const me = auth(req), e = String(body.endpoint || '');
+  if (!PUSH || !/^https:\/\//.test(e) || e.length > 1000) throw err(400, 'Bildirim kullanılamıyor');
+  db.prepare('INSERT INTO push_subs(endpoint,user_id,created) VALUES(?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id').run(e, me.id, now());
+  return { ok: true };
+});
+R('POST', '/api/push/unsubscribe', ({ req, body }) => { const me = auth(req); db.prepare('DELETE FROM push_subs WHERE endpoint=? AND user_id=?').run(String(body.endpoint || ''), me.id); return { ok: true }; });
+R('POST', '/api/push/pending', ({ body }) => {   // servis işçisi kendi adresiyle sorar; kimlik gerekmez, adres gizlidir
+  const e = String(body.endpoint || '');
+  const row = db.prepare('SELECT * FROM push_queue WHERE endpoint=? ORDER BY id DESC LIMIT 1').get(e);
+  db.prepare('DELETE FROM push_queue WHERE endpoint=?').run(e);
+  db.prepare('DELETE FROM push_queue WHERE created<?').run(now() - 86400000);
+  return row ? { title: row.title, body: row.body } : { title: 'Jestora', body: 'Seni bekleyen bir şey var.' };
+});
+
+// ---- Akış: yalnızca yazı, yalnızca jest arkadaşlarına, en geç o günün sonunda silinir (İstanbul saati)
+db.exec('CREATE TABLE IF NOT EXISTS feed(id INTEGER PRIMARY KEY, user_id INTEGER, text TEXT, created INTEGER, exp INTEGER, hidden INTEGER DEFAULT 0)');
+db.exec('CREATE TABLE IF NOT EXISTS feed_reports(feed_id INTEGER, user_id INTEGER, reason TEXT, at INTEGER, PRIMARY KEY(feed_id,user_id))');
+db.exec('CREATE TABLE IF NOT EXISTS feed_hides(user_id INTEGER, feed_id INTEGER, PRIMARY KEY(user_id,feed_id))');
+db.exec('CREATE TABLE IF NOT EXISTS feed_blocks(user_id INTEGER, blocked_id INTEGER, PRIMARY KEY(user_id,blocked_id))');
+const FEED_DAY_MAX = +process.env.JEST_AKIS_GUNLUK || 3;
+const FEED_DURS = { '10m': 600000, '3h': 3 * 3600000, '10h': 10 * 3600000, day: 24 * 3600000 };
+const endOfDay = (t = now()) => (Math.floor((t + 3 * 3600000) / 86400000) + 1) * 86400000 - 3 * 3600000;
+const feedPurge = () => { const t = now(); db.prepare('DELETE FROM feed WHERE exp<=?').run(t); db.prepare('DELETE FROM feed_reports WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_hides WHERE feed_id NOT IN (SELECT id FROM feed)').run(); };
+setInterval(feedPurge, 600000).unref();
+function friendIds(uid) {   // jest arkadaşı: aralarında kabul edilmiş bir davet olan kişiler
+  const a = db.prepare("SELECT i.host_id id FROM invites i JOIN guests g ON g.invite_id=i.id WHERE g.user_id=? AND g.status IN ('accepted','proposed') AND i.status!='cancelled'").all(uid).map(x => x.id);
+  const b = db.prepare("SELECT g.user_id id FROM invites i JOIN guests g ON g.invite_id=i.id WHERE i.host_id=? AND g.status IN ('accepted','proposed') AND i.status!='cancelled'").all(uid).map(x => x.id);
+  return [...new Set([...a, ...b])].filter(x => x !== uid);
+}
+const feedBad = t => {
+  if (badText(t)) return 'Yazıda Jestora kurallarına aykırı bir ifade var (bahis, ceza, borç yok)';
+  if (/https?:|www\.|\.(com|net|org|app|me|ly|tr|io)\b/i.test(t)) return 'Akışta bağlantı paylaşılamaz';
+  if ((t.replace(/\D/g, '')).length >= 7) return 'Akışta telefon numarası paylaşılamaz';
+  if (/@\w{3,}/.test(t)) return 'Akışta hesap adı paylaşılamaz';
+  return null;
+};
+R('POST', '/api/feed', ({ req, body }) => {
+  const me = auth(req); feedPurge();
+  const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  if (text.length < 2) throw err(400, 'Bir şeyler yaz (en az 2 harf)');
+  const bad = feedBad(text); if (bad) throw err(400, bad);
+  const d = FEED_DURS[body.dur]; if (!d) throw err(400, 'Süre seç');
+  const t = now(), dayStart = endOfDay(t) - 86400000;
+  if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=?').get(me.id, dayStart).c >= FEED_DAY_MAX) throw err(429, 'Günde en fazla ' + FEED_DAY_MAX + ' yazı paylaşabilirsin');
+  const exp = Math.min(t + d, endOfDay(t));   // ertesi güne geçmez
+  const r = db.prepare('INSERT INTO feed(user_id,text,created,exp) VALUES(?,?,?,?)').run(me.id, text, t, exp);
+  return { id: Number(r.lastInsertRowid), exp };
+});
+R('GET', '/api/feed', ({ req }) => {
+  const me = auth(req); feedPurge();
+  const fr = friendIds(me.id), ids = [me.id, ...fr];
+  const blocked = new Set(db.prepare('SELECT blocked_id id FROM feed_blocks WHERE user_id=?').all(me.id).map(x => x.id));
+  const hid = new Set(db.prepare('SELECT feed_id id FROM feed_hides WHERE user_id=?').all(me.id).map(x => x.id));
+  const rows = db.prepare('SELECT f.*,u.name,u.phone FROM feed f JOIN users u ON u.id=f.user_id WHERE f.hidden=0 AND f.exp>? ORDER BY f.created DESC LIMIT 100').all(now())
+    .filter(f => ids.includes(f.user_id) && !blocked.has(f.user_id) && !hid.has(f.id)).slice(0, 40);
+  return { max: FEED_DAY_MAX, posts: rows.map(f => ({ id: f.id, name: f.name, mine: f.user_id === me.id, text: f.text, at: f.created, left: Math.max(1, Math.round((f.exp - now()) / 60000)), ph: f.user_id === me.id ? null : f.phone.replace(/^\+90/, '') })) };
+});
+R('POST', '/api/feed/:id/delete', ({ req, p }) => { const me = auth(req); db.prepare('DELETE FROM feed WHERE id=? AND user_id=?').run(+p.id, me.id); return { ok: true }; });
+R('POST', '/api/feed/:id/hide', ({ req, p }) => { const me = auth(req); db.prepare('INSERT OR IGNORE INTO feed_hides(user_id,feed_id) VALUES(?,?)').run(me.id, +p.id); return { ok: true }; });
+R('POST', '/api/feed/:id/block', ({ req, p }) => { const me = auth(req); const f = db.prepare('SELECT user_id FROM feed WHERE id=?').get(+p.id); if (f && f.user_id !== me.id) db.prepare('INSERT OR IGNORE INTO feed_blocks(user_id,blocked_id) VALUES(?,?)').run(me.id, f.user_id); return { ok: true }; });
+R('POST', '/api/feed/:id/report', ({ req, p, body }) => {   // şikâyet edilen yazı şikâyet edene hemen kapanır; iki ayrı kişi şikâyet ederse herkese kapanır
+  const me = auth(req), id = +p.id, f = db.prepare('SELECT * FROM feed WHERE id=?').get(id);
+  if (!f) return { ok: true };
+  db.prepare('INSERT OR REPLACE INTO feed_reports(feed_id,user_id,reason,at) VALUES(?,?,?,?)').run(id, me.id, String(body.reason || '').slice(0, 200), now());
+  db.prepare('INSERT OR IGNORE INTO feed_hides(user_id,feed_id) VALUES(?,?)').run(me.id, id);
+  if (db.prepare('SELECT COUNT(*) c FROM feed_reports WHERE feed_id=?').get(id).c >= 2) db.prepare('UPDATE feed SET hidden=1 WHERE id=?').run(id);
+  return { ok: true };
+});
+R('GET', '/api/admin/feed-reports', ({ req }) => {   // kurucu için: şikâyetli yazılar (süre dolana kadar)
+  if ((req.headers['x-admin-key'] || '') !== ADMIN_KEY) throw err(403, 'Yetkisiz');
+  feedPurge();
+  return { reports: db.prepare('SELECT f.id,f.text,f.hidden,f.exp,u.name,COUNT(r.user_id) n FROM feed f JOIN users u ON u.id=f.user_id JOIN feed_reports r ON r.feed_id=f.id GROUP BY f.id').all() };
+});
+R('POST', '/api/admin/feed/:id/delete', ({ req, p }) => {
+  if ((req.headers['x-admin-key'] || '') !== ADMIN_KEY) throw err(403, 'Yetkisiz');
+  db.prepare('DELETE FROM feed WHERE id=?').run(+p.id); return { ok: true };
 });
 R('GET', '/api/invites', ({ req }) => {
   const me = auth(req);
@@ -343,6 +456,7 @@ R('POST', '/api/invites/:id/respond', ({ req, p, body }) => {
   } else {
     if (i.status !== 'open') throw err(400, 'Bu davet artık açık değil');
     if (body.action === 'accept') db.prepare("UPDATE guests SET status='accepted',proposal_at=NULL WHERE invite_id=? AND user_id=?").run(i.id, me.id);
+    if (body.action === 'accept') notify(i.host_id, 'Davetin kabul edildi', me.name + ' davetini kabul etti.');
     else if (body.action === 'decline') db.prepare("UPDATE guests SET status='declined' WHERE invite_id=? AND user_id=?").run(i.id, me.id);
     else if (body.action === 'propose') { const at = +body.at; if (!at || at < now() + 600000) throw err(400, 'Zaman geçmişte olamaz'); db.prepare("UPDATE guests SET status='proposed',proposal_at=? WHERE invite_id=? AND user_id=?").run(at, i.id, me.id); }
     else throw err(400, 'Geçersiz işlem');
@@ -535,4 +649,5 @@ const server = http.createServer(async (req, res) => {
   } catch (e) { ok(res, { error: e.message }, e.code || 500); if (!e.code) console.error(e); }
 });
 if (require.main === module) server.listen(PORT, () => console.log(`Jestora http://localhost:${PORT}${DEV ? '  (GELİŞTİRME)' : ''}`));
-module.exports = { server, db };
+pushSender.header = vapidHeader;
+module.exports = { server, db, pushSender };
