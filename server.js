@@ -192,7 +192,7 @@ R('POST', '/api/me/delete', ({ req, body }) => {
   db.prepare('DELETE FROM thanks WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM mygoals WHERE user_id=?').run(me.id);
   db.prepare('DELETE FROM occasions WHERE user_id=?').run(me.id);
-  db.prepare('DELETE FROM feed WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_blocks WHERE user_id=? OR blocked_id=?').run(me.id, me.id); db.prepare('DELETE FROM feed_hides WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_reports WHERE user_id=?').run(me.id); db.prepare('DELETE FROM push_subs WHERE user_id=?').run(me.id); db.prepare('DELETE FROM push_log WHERE user_id=?').run(me.id);
+  db.prepare('DELETE FROM feed WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_comments WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_comment_reports WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_blocks WHERE user_id=? OR blocked_id=?').run(me.id, me.id); db.prepare('DELETE FROM feed_hides WHERE user_id=?').run(me.id); db.prepare('DELETE FROM feed_reports WHERE user_id=?').run(me.id); db.prepare('DELETE FROM push_subs WHERE user_id=?').run(me.id); db.prepare('DELETE FROM push_log WHERE user_id=?').run(me.id);
   db.prepare("UPDATE guests SET status='declined' WHERE user_id=? AND status IN ('pending','proposed')").run(me.id);
   db.prepare("UPDATE invites SET status='cancelled' WHERE host_id=? AND status='open'").run(me.id);
   db.prepare("UPDATE users SET phone='silindi-'||id, name='Silinmiş kullanıcı', username='silindi-'||id WHERE id=?").run(me.id);
@@ -380,11 +380,13 @@ R('POST', '/api/push/pending', ({ body }) => {   // servis işçisi kendi adresi
 db.exec('CREATE TABLE IF NOT EXISTS feed(id INTEGER PRIMARY KEY, user_id INTEGER, text TEXT, created INTEGER, exp INTEGER, hidden INTEGER DEFAULT 0)');
 db.exec('CREATE TABLE IF NOT EXISTS feed_reports(feed_id INTEGER, user_id INTEGER, reason TEXT, at INTEGER, PRIMARY KEY(feed_id,user_id))');
 db.exec('CREATE TABLE IF NOT EXISTS feed_hides(user_id INTEGER, feed_id INTEGER, PRIMARY KEY(user_id,feed_id))');
+db.exec('CREATE TABLE IF NOT EXISTS feed_comments(id INTEGER PRIMARY KEY, feed_id INTEGER, user_id INTEGER, text TEXT, created INTEGER)');
+db.exec('CREATE TABLE IF NOT EXISTS feed_comment_reports(comment_id INTEGER, user_id INTEGER, PRIMARY KEY(comment_id,user_id))');
 db.exec('CREATE TABLE IF NOT EXISTS feed_blocks(user_id INTEGER, blocked_id INTEGER, PRIMARY KEY(user_id,blocked_id))');
 const FEED_DAY_MAX = +process.env.JEST_AKIS_GUNLUK || 3;
 const FEED_DURS = { '10m': 600000, '3h': 3 * 3600000, '10h': 10 * 3600000, day: 24 * 3600000 };
 const endOfDay = (t = now()) => (Math.floor((t + 3 * 3600000) / 86400000) + 1) * 86400000 - 3 * 3600000;
-const feedPurge = () => { const t = now(); db.prepare('DELETE FROM feed WHERE exp<=?').run(t); db.prepare('DELETE FROM feed_reports WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_hides WHERE feed_id NOT IN (SELECT id FROM feed)').run(); };
+const feedPurge = () => { const t = now(); db.prepare('DELETE FROM feed WHERE exp<=?').run(t); db.prepare('DELETE FROM feed_reports WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_hides WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_comments WHERE feed_id NOT IN (SELECT id FROM feed)').run(); db.prepare('DELETE FROM feed_comment_reports WHERE comment_id NOT IN (SELECT id FROM feed_comments)').run(); };
 setInterval(feedPurge, 600000).unref();
 function friendIds(uid) {   // jest arkadaşı: aralarında kabul edilmiş bir davet olan kişiler
   const a = db.prepare("SELECT i.host_id id FROM invites i JOIN guests g ON g.invite_id=i.id WHERE g.user_id=? AND g.status IN ('accepted','proposed') AND i.status!='cancelled'").all(uid).map(x => x.id);
@@ -417,7 +419,10 @@ R('GET', '/api/feed', ({ req }) => {
   const hid = new Set(db.prepare('SELECT feed_id id FROM feed_hides WHERE user_id=?').all(me.id).map(x => x.id));
   const rows = db.prepare('SELECT f.*,u.name,u.phone FROM feed f JOIN users u ON u.id=f.user_id WHERE f.hidden=0 AND f.exp>? ORDER BY f.created DESC LIMIT 100').all(now())
     .filter(f => ids.includes(f.user_id) && !blocked.has(f.user_id) && !hid.has(f.id)).slice(0, 40);
-  return { max: FEED_DAY_MAX, posts: rows.map(f => ({ id: f.id, name: f.name, mine: f.user_id === me.id, text: f.text, at: f.created, left: Math.max(1, Math.round((f.exp - now()) / 60000)), ph: f.user_id === me.id ? null : f.phone.replace(/^\+90/, '') })) };
+  const myRep = new Set(db.prepare('SELECT comment_id id FROM feed_comment_reports WHERE user_id=?').all(me.id).map(x => x.id));
+  const cm = id => db.prepare('SELECT c.*,u.name FROM feed_comments c JOIN users u ON u.id=c.user_id WHERE c.feed_id=? ORDER BY c.id').all(id).filter(c => !myRep.has(c.id) && !blocked.has(c.user_id));
+  return { max: FEED_DAY_MAX, posts: rows.map(f => ({ id: f.id, name: f.name, mine: f.user_id === me.id, text: f.text, at: f.created, left: Math.max(1, Math.round((f.exp - now()) / 60000)), ph: f.user_id === me.id ? null : f.phone.replace(/^\+90/, ''),
+    comments: cm(f.id).map(c => ({ id: c.id, name: c.name, text: c.text, mine: c.user_id === me.id, canDelete: c.user_id === me.id || f.user_id === me.id })) })) };
 });
 R('POST', '/api/feed/:id/delete', ({ req, p }) => { const me = auth(req); db.prepare('DELETE FROM feed WHERE id=? AND user_id=?').run(+p.id, me.id); return { ok: true }; });
 R('POST', '/api/feed/:id/hide', ({ req, p }) => { const me = auth(req); db.prepare('INSERT OR IGNORE INTO feed_hides(user_id,feed_id) VALUES(?,?)').run(me.id, +p.id); return { ok: true }; });
@@ -428,6 +433,34 @@ R('POST', '/api/feed/:id/report', ({ req, p, body }) => {   // şikâyet edilen 
   db.prepare('INSERT OR REPLACE INTO feed_reports(feed_id,user_id,reason,at) VALUES(?,?,?,?)').run(id, me.id, String(body.reason || '').slice(0, 200), now());
   db.prepare('INSERT OR IGNORE INTO feed_hides(user_id,feed_id) VALUES(?,?)').run(me.id, id);
   if (db.prepare('SELECT COUNT(*) c FROM feed_reports WHERE feed_id=?').get(id).c >= 2) db.prepare('UPDATE feed SET hidden=1 WHERE id=?').run(id);
+  return { ok: true };
+});
+
+R('POST', '/api/feed/:id/comment', ({ req, p, body }) => {   // yorum, yazıyı görebilen herkesten; yazıyla birlikte silinir
+  const me = auth(req); feedPurge();
+  const f = db.prepare('SELECT * FROM feed WHERE id=? AND hidden=0 AND exp>?').get(+p.id, now());
+  if (!f) throw err(404, 'Bu yazı artık yok');
+  if (f.user_id !== me.id && !friendIds(me.id).includes(f.user_id)) throw err(403, 'Bu yazıya yorum yapamazsın');
+  if (db.prepare('SELECT 1 FROM feed_blocks WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(me.id, f.user_id, f.user_id, me.id)) throw err(403, 'Bu yazıya yorum yapamazsın');
+  const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+  if (text.length < 2) throw err(400, 'Bir şeyler yaz (en az 2 harf)');
+  const bad = feedBad(text); if (bad) throw err(400, bad.replace('Yazıda', 'Yorumda'));
+  if (db.prepare('SELECT COUNT(*) c FROM feed_comments WHERE feed_id=? AND user_id=?').get(f.id, me.id).c >= 3) throw err(429, 'Bir yazıya en fazla 3 yorum yazabilirsin');
+  if (db.prepare('SELECT COUNT(*) c FROM feed_comments WHERE feed_id=?').get(f.id).c >= 30) throw err(429, 'Bu yazının yorumları doldu');
+  const r = db.prepare('INSERT INTO feed_comments(feed_id,user_id,text,created) VALUES(?,?,?,?)').run(f.id, me.id, text, now());
+  if (f.user_id !== me.id) notify(f.user_id, 'Yazına yorum geldi', me.name + ' yazına yorum yaptı.');
+  return { id: Number(r.lastInsertRowid) };
+});
+R('POST', '/api/feed/comments/:id/delete', ({ req, p }) => {
+  const me = auth(req), c = db.prepare('SELECT c.*,f.user_id owner FROM feed_comments c JOIN feed f ON f.id=c.feed_id WHERE c.id=?').get(+p.id);
+  if (c && (c.user_id === me.id || c.owner === me.id)) db.prepare('DELETE FROM feed_comments WHERE id=?').run(c.id);
+  return { ok: true };
+});
+R('POST', '/api/feed/comments/:id/report', ({ req, p }) => {   // şikâyet eden artık görmez; iki kişi şikâyet ederse yorum silinir
+  const me = auth(req), id = +p.id;
+  if (!db.prepare('SELECT 1 FROM feed_comments WHERE id=?').get(id)) return { ok: true };
+  db.prepare('INSERT OR IGNORE INTO feed_comment_reports(comment_id,user_id) VALUES(?,?)').run(id, me.id);
+  if (db.prepare('SELECT COUNT(*) c FROM feed_comment_reports WHERE comment_id=?').get(id).c >= 2) db.prepare('DELETE FROM feed_comments WHERE id=?').run(id);
   return { ok: true };
 });
 R('GET', '/api/admin/feed-reports', ({ req }) => {   // kurucu için: şikâyetli yazılar (süre dolana kadar)
