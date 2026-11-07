@@ -1,7 +1,8 @@
 // Jestora gerçek davet akışı: liste, yeni davet, yanıt, QR, fiş. Sunucuya bağlıdır.
 (function(){
-var api=window.jestApi,VEN=[],lastLoad=0,busy=false,view=[];
+var api=window.jestApi,VEN=[],MEKAN=false,VENLOADED=false,lastLoad=0,busy=false,view=[];
 window.JESTS=[];
+try{window.jestApi('GET','/api/config').then(function(j){MEKAN=!!j.mekan})}catch(e){}
 var st=document.createElement('style');
 st.textContent='.rov{position:fixed;inset:0;background:rgba(15,27,61,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center}.rpn{background:#FFF6EC;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:20px 20px 28px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}.rpn h2{margin:0}.rpn input,.rpn select{width:100%;box-sizing:border-box;padding:12px;border-radius:14px;border:2px solid #E8DCCB;font:inherit;background:#fff}.rpn .row{display:flex;gap:8px;flex-wrap:wrap}.rpn .qrb{background:#fff;border-radius:16px;padding:8px;align-self:center;max-width:280px}.rpn .qrb svg{width:100%;height:auto;display:block}.rpn .big{font-size:22px;font-weight:800}.rpn .okb{background:#E7F8EF;border-radius:14px;padding:12px}.rpn .gl{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #EADFCF}';
 document.head.appendChild(st);
@@ -46,7 +47,7 @@ function tdSec(title,sub,id){var d=el('div','');d.className='tdsec';if(id)d.id=i
 function tdInp(ph,lab,type,max){var i=document.createElement('input');i.type=type||'text';if(max)i.maxLength=max;i.placeholder=ph;i.setAttribute('aria-label',lab);i.style.cssText='width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd';return i}
 function tdRow(){var r=el('div','');r.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';return r}
 function renderTodayForce(){loadToday(true)}
-function newWith(pre){if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openNew(pre)})}else openNew(pre)}
+function newWith(pre){if(!VENLOADED){api('GET','/api/venues').then(function(j){VEN=j.venues;VENLOADED=true;openNew(pre)})}else openNew(pre)}
 window.jestOpenNew=newWith;
 function wa(msg){if(navigator.share){navigator.share({text:msg}).catch(function(){})}else{window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}}
 function renderToday(){
@@ -71,7 +72,7 @@ function renderToday(){
   var mine=TD.turns.filter(function(t){return t.mine}),theirs=TD.turns.filter(function(t){return !t.mine});
   if(TD.fresh||!TD.turns.length){sT.appendChild(el('div',TD.fresh?'İlk jestini 60 saniyede gönder. Bir şablon seç:':'Henüz tamamlanmış jestin yok. Bir arkadaşını davet et:'));
     var tr=tdRow();
-    tr.appendChild(btn('Kahve jesti',function(){newWith({kind:'meet'})},'chip'));tr.appendChild(btn('Çay jesti',function(){newWith({kind:'meet'})},'chip'));tr.appendChild(btn('Hedef jesti',function(){newWith({kind:'goal'})},'chip'));sT.appendChild(tr)}
+    tr.appendChild(btn('Hedef jesti',function(){newWith({kind:'goal'})},'chip'));tr.appendChild(btn('Kahve jesti',function(){newWith({kind:'meet'})},'chip'));tr.appendChild(btn('Çay jesti',function(){newWith({kind:'meet'})},'chip'));sT.appendChild(tr)}
   mine.forEach(function(t){var r=tdRow();var tt=el('div','Sıra sende: '+t.name+' ('+t.days+' gün önce o ısmarladı)');tt.style.cssText='flex:1;min-width:10rem;font-weight:700';r.appendChild(tt);r.appendChild(btn('Davet et',function(){newWith({kind:'meet',guest:t.phone})},'chip'));sT.appendChild(r)});
   theirs.forEach(function(t){var r=el('div','Sıra onda: '+t.name+' (en son sen ısmarladın)');r.style.cssText='font-size:.9em;opacity:.8';sT.appendChild(r)});
   // 3) hedeflerim
@@ -120,7 +121,7 @@ function draw(){oldRender();
   if(wait){var w=el('div','');w.id='rGuide';w.className='card';w.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin-bottom:10px;font-weight:800';w.textContent='Yanıtını bekleyen '+wait+' davetin var. Açmak için dokun.';w.style.cursor='pointer';w.setAttribute('role','button');w.tabIndex=0;var wj=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'})[0];w.onclick=function(){if(wj)openDetail(wj.id)};w.onkeydown=function(e){if(e.key==='Enter'&&wj)openDetail(wj.id)};box.parentNode.insertBefore(w,box)}
   if(!view.length){var e=document.querySelector('#jlist p.sub');if(e)e.textContent=homeTab==='a'?'Aktif jestin yok.':'Geçmiş jestin yok.';
     if(!JESTS.length&&homeTab==='a'){var g=el('div','');g.id='rGuide';g.className='card';g.style.cssText='border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px';
-      g.appendChild(el('b','Nasıl çalışır?'));['1. Tanıdığın birini davet et: sadece buluşma ya da bir hedef koyup “başarırsan sana jest” de. Yeri (haritadan herhangi bir yer) ve saati seç.','2. O kabul edince (hedef varsa hedef onaylanınca) buluşun.','3. Buluşunca bir fotoğraf çekip yükleyin, QR açılır; mekân onaylayınca jest fiyatı geçerli olur. Ödeme mekânda yapılır, Jestora para tutmaz.'].forEach(function(t){g.appendChild(el('span',t))});
+      g.appendChild(el('b','Nasıl çalışır?'));['1. Bir hedef koy, tanıdığın birini davet et: “başarırsan sana jest” de (ya da sadece buluşma). Yeri (haritadan herhangi bir yer) ve saati seç.','2. O kabul edince, hedef onaylanınca buluşun.',(MEKAN?'3. Buluşunca bir fotoğraf çekip yükleyin, QR açılır; mekân onaylayınca jest fiyatı geçerli olur. Ödeme mekânda yapılır, Jestora para tutmaz.':'3. Buluşunca bir fotoğraf çekip yükleyin; ikiniz de “Buluştuk” deyince jest tamamlanır. Jestora para tutmaz.')].forEach(function(t){g.appendChild(el('span',t))});
       g.appendChild(el('small','Not: Karşındaki kişi henüz üye değilse, ona göndereceğin davet linki hazırlanır; link kayıt ekranında seni karşılar.'));box.parentNode.insertBefore(g,box)}}}
 window.renderHome=function(){draw();if(localStorage.getItem('jest-token'))load()};
 setInterval(function(){var s=$$('s7');if(s&&!s.hidden&&!document.querySelector('.rov'))load(true)},15000);
@@ -155,7 +156,7 @@ function placePicker(p,init){
   var wrap=el('div','');wrap.style.cssText='display:flex;flex-direction:column;gap:10px';
   var sel=document.createElement('select');
   VEN.forEach(function(v){var o=document.createElement('option');o.value=v.id;o.textContent=v.name+' · '+v.district+' · '+tl(v.normal)+' yerine '+tl(v.jest);sel.appendChild(o)});
-  var oc=document.createElement('option');oc.value='0';oc.textContent='Başka bir yer (Konum bul)';sel.appendChild(oc);wrap.appendChild(sel);
+  var oc=document.createElement('option');oc.value='0';oc.textContent=MEKAN?'Başka bir yer (Konum bul)':'Konum bul';sel.appendChild(oc);if(MEKAN)wrap.appendChild(sel);else sel.value='0';
   var box=el('div','');box.style.cssText='display:none;flex-direction:column;gap:10px;background:#fff;border-radius:16px;padding:12px';wrap.appendChild(box);
   box.appendChild(el('b','Konum bul'));
   var inp=document.createElement('input');inp.type='text';inp.maxLength=400;inp.autocomplete='off';inp.placeholder='Yer adı yaz veya Haritalar bağlantısını yapıştır';inp.setAttribute('aria-label','Yer adı veya Haritalar bağlantısı');box.appendChild(inp);
@@ -167,7 +168,7 @@ function placePicker(p,init){
       if(!st.name){st.name='Bulunduğum konum';inp.value=st.name;auto=true;setTimeout(function(){inp.focus();inp.select()},50)}
       info.textContent='Konum alındı: '+st.lat+', '+st.lng+(pos.coords.accuracy?' (yaklaşık '+Math.round(pos.coords.accuracy)+' m)':'')+'. Yerin adını düzeltebilirsin.';upd()},
       function(){geo.disabled=false;info.textContent='Konum izni verilmedi. Yer adını yazabilir ya da Haritalar bağlantısı yapıştırabilirsin.'},{enableHighAccuracy:false,timeout:8000,maximumAge:60000})},'chip');box.appendChild(geo);
-  var info=el('p','1) Yer adını yaz. 2) Haritada ara ile kontrol et. İstersen Haritalar\'daki uzun bağlantıyı buraya yapıştır, yer adı otomatik gelir. Üye olmayan yerde normal ödeme geçerli, jest indirimi olmaz.','sub');info.style.fontSize='13px';box.appendChild(info);
+  var info=el('p','1) Yer adını yaz. 2) Haritada ara ile kontrol et. İstersen Haritalar\'daki uzun bağlantıyı buraya yapıştır, yer adı otomatik gelir.'+(MEKAN?' Üye olmayan yerde normal ödeme geçerli, jest indirimi olmaz.':'')+'','sub');info.style.fontSize='13px';box.appendChild(info);
   var st={name:'',url:'',lat:null,lng:null};var auto=false;
   function upd(){var q=st.name&&!st.url?st.name:(st.lat!=null?st.lat+','+st.lng:'kafe yakınımda');find.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q)}
   inp.onfocus=function(){if(auto)inp.select()};inp.oninput=function(){auto=false;var r=parseMaps(inp.value);st.name=r.name;st.url=r.url;if(r.url){st.lat=r.lat;st.lng=r.lng}
@@ -177,7 +178,7 @@ function placePicker(p,init){
   if(init){if(init.custom){sel.value='0';st.name=init.name||'';st.url=init.url||'';st.lat=init.lat!=null?init.lat:null;st.lng=init.lng!=null?init.lng:null;inp.value=st.url||st.name;upd()}else sel.value=String(init.id)}
   show();p.appendChild(wrap);
   return {body:function(){return sel.value==='0'?{venueId:0,place:{name:st.name,url:st.url,lat:st.lat,lng:st.lng}}:{venueId:+sel.value}},
-    check:function(){return sel.value==='0'&&st.name.trim().length<2?'Yerin adını yaz ya da bir üye mekân seç.':''}}}
+    check:function(){return sel.value==='0'&&st.name.trim().length<2?(MEKAN?'Yerin adını yaz ya da bir üye mekân seç.':'Yerin adını yaz.'):''}}}
 
 // ---- fotoğraf: kameradan çek, küçült, yükle ----
 function shrinkPhoto(file,cb,bad){
@@ -194,7 +195,7 @@ function openNew(pre){
   var O=overlay(),p=O.p,guests=[],kind='meet',dir='me';
   p.appendChild(el('h2','Yeni jest daveti'));
   var kr=el('div','');kr.className='row';p.appendChild(kr);
-  var kb=btn('Buluşma',function(){setKind('meet')},'chip'),kg=btn('Hedef jesti',function(){setKind('goal')},'chip');kb.id='kMeet';kg.id='kGoal';kr.appendChild(kb);kr.appendChild(kg);
+  var kb=btn('Buluşma',function(){setKind('meet')},'chip'),kg=btn('Hedef jesti',function(){setKind('goal')},'chip');kb.id='kMeet';kg.id='kGoal';kr.appendChild(kg);kr.appendChild(kb);
   var kd=el('p','','sub');p.appendChild(kd);
   var gbox=el('div','');gbox.style.cssText='display:none;flex-direction:column;gap:8px';p.appendChild(gbox);
   var ds=document.createElement('select');ds.id='goalDir';[['me','Hedef benim: başarırsam sen bana jest ver'],['you','Hedef senin: başarırsan ben sana jest vereyim']].forEach(function(x){var o=document.createElement('option');o.value=x[0];o.textContent=x[1];ds.appendChild(o)});ds.onchange=function(){dir=ds.value};gbox.appendChild(ds);
@@ -218,8 +219,8 @@ function openNew(pre){
   var pp=placePicker(p,null);
   var tl2=el('h2','Ne zaman?');p.appendChild(tl2);
   var dt=document.createElement('input');dt.type='datetime-local';var d0=new Date();d0.setDate(d0.getDate()+1);d0.setHours(15,0,0,0);dt.value=dtl(d0);dt.min=dtl(Date.now()+900000);p.appendChild(dt);
-  var er=errBox();p.appendChild(er);setKind('meet');
-  if(pre){if(pre.kind==='goal')setKind('goal');if(pre.goal)gi.value=pre.goal;if(pre.guest&&/^5\d{9}$/.test(pre.guest)){guests.push(pre.guest);rg()}}
+  var er=errBox();p.appendChild(er);setKind('goal');
+  if(pre){if(pre.kind==='meet')setKind('meet');if(pre.goal)gi.value=pre.goal;if(pre.guest&&/^5\d{9}$/.test(pre.guest)){guests.push(pre.guest);rg()}}
   var go2=btn('Daveti gönder',function(){
     if(ph.value.trim())add.onclick();if(!guests.length){er.textContent='En az bir kişi ekle.';return}
     if(kind==='goal'&&gi.value.trim().length<3){er.textContent='Hedefi yaz (en az 3 harf).';return}
@@ -255,14 +256,14 @@ function shareCard(i){var c=cardCanvas(i);
 window.jestCardCanvas=cardCanvas;
 // ---- ayrıntı ----
 function openDetail(id){
-  if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openDetail(id)});return}
+  if(!VENLOADED){api('GET','/api/venues').then(function(j){VEN=j.venues;VENLOADED=true;openDetail(id)});return}
   var O=overlay(),p=O.p;
   function render(i){
     p.innerHTML='';var me=window.JEST_ME||{},cu=i.venue.custom;
     p.appendChild(el('h2',cu?i.venue.name:i.venue.name+' · '+i.venue.district));
     if(cu){var ml=document.createElement('a');ml.textContent='Haritada aç';ml.href=mapsLink(i.venue);ml.target='_blank';ml.rel='noopener';ml.style.cssText='color:#FF7A1A;font-weight:700';p.appendChild(ml)}
     p.appendChild(el('p',fmt(i.at),'big'));
-    p.appendChild(el('p',cu?'Üye olmayan yer: normal ödeme geçerli, jest indirimi yok. Jestora para tutmaz.':'Normal fiyat '+tl(i.venue.normal)+', jest fiyatı '+tl(i.venue.jest)+'. Ödeme mekânda yapılır, Jestora para tutmaz.','sub'));
+    p.appendChild(el('p',cu?(MEKAN?'Üye olmayan yer: normal ödeme geçerli, jest indirimi yok. Jestora para tutmaz.':'Ödeme senin ve arkadaşının kendi arasındadır. Jestora para tutmaz.'):'Normal fiyat '+tl(i.venue.normal)+', jest fiyatı '+tl(i.venue.jest)+'. Ödeme mekânda yapılır, Jestora para tutmaz.','sub'));
     p.appendChild(el('div','Davet sahibi: '+i.host.name+(i.role==='host'?' (sen)':'')));
     if(i.status==='confirmed'){var cb=btn('Jest kartı paylaş',function(){shareCard(i)},'chip');cb.id='cardBtn';p.appendChild(cb)}
     var mine=i.guests.filter(function(g){return g.id===me.id})[0];
@@ -308,7 +309,7 @@ function openDetail(id){
         p.appendChild(box)})}
     if(i.status==='confirmed'){
       var rc=el('div','');rc.className='okb';
-      rc.textContent=cu?(i.kind==='goal'?'Hedef jesti tamamlandı. Buluşma onaylandı. Üye olmayan yerde normal ödeme geçerli.':'Buluşma onaylandı. Üye olmayan yerde normal ödeme geçerli.'):'Jest onaylandı. Mekânda ödeyeceğin tutar '+tl(i.venue.jest)+'. Normal fiyat '+tl(i.venue.normal)+', kazancın '+tl(i.venue.normal-i.venue.jest)+'.';p.appendChild(rc);
+      rc.textContent=cu?(i.kind==='goal'?'Hedef jesti tamamlandı. Buluşma onaylandı.'+(MEKAN?' Üye olmayan yerde normal ödeme geçerli.':''):'Buluşma onaylandı.'+(MEKAN?' Üye olmayan yerde normal ödeme geçerli.':'')):'Jest onaylandı. Mekânda ödeyeceğin tutar '+tl(i.venue.jest)+'. Normal fiyat '+tl(i.venue.normal)+', kazancın '+tl(i.venue.normal-i.venue.jest)+'.';p.appendChild(rc);
       if(i.photoReady)loadPhotos(i,p)}
     else if(i.status==='cancelled'){p.appendChild(el('p','Bu davet geri çekildi.','sub'))}
     else{
@@ -398,7 +399,7 @@ function showQR(i){
 })();
 document.querySelectorAll('.demo').forEach(function(d){d.textContent='Kapalı pilot'});
 (function(){var lo=$$('logout');if(!lo)return;var row=lo.parentNode;row.style.flexWrap='wrap';row.style.justifyContent='flex-end';row.style.gap='8px';var n=row.querySelector('.note');if(n)n.remove();[].forEach.call(row.querySelectorAll('button'),function(b){b.style.marginLeft='0'})})();
-$$('newJ').onclick=function(){if(!VEN.length){api('GET','/api/venues').then(function(j){VEN=j.venues;openNew()})}else openNew()};
+$$('newJ').onclick=function(){newWith()};
 $$('toHome').onclick=function(){renderHome();go(7)};
 // oturum sahibini bilmek için
 var oldMe=window.jestApi;
