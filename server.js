@@ -11,6 +11,7 @@ const COMMISSION = +process.env.JEST_COMMISSION || 8;     // TL, onaylanan her j
 const CODES = (process.env.JEST_KODLAR || '').split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
 // Pilot kipi (JEST_PILOT=1): SMS yok. JEST_KODLAR içindeki her kod bir kişiye verilir (6-8 hane, rakam); ilk kullanan numaraya bağlanır, giriş kodu olarak da o kullanılır.
 const PILOT = process.env.JEST_PILOT === '1';
+const MEKAN = process.env.JEST_MEKANLAR === '1';   // üye mekân ve jest fiyatı: ilk sürümde kapalı, ikinci aşamada açılır
 const CLOSED = process.env.JEST_KAPALI === '1' || PILOT || (DEV && CODES.length > 0);
 const pilotFails = new Map();
 function pinHash(p) { const salt = crypto.randomBytes(8).toString('hex'); return salt + ':' + crypto.scryptSync(p, salt, 32).toString('hex'); }
@@ -168,7 +169,7 @@ R('POST', '/api/verify', async ({ body }) => {
   db.prepare('INSERT INTO sessions(token,user_id,created) VALUES(?,?,?)').run(token, u.id, now());
   return { token, user: pubUser(u) };
 });
-R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT }));
+R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT, mekan: MEKAN }));
 R('GET', '/api/link/:token', ({ p }) => {   // davet linkine tıklayan, kayıt olmadan önce davetin özetini görür
   const r = db.prepare('SELECT * FROM invite_pending WHERE token=? AND used=0').get(p.token);
   if (!r) throw err(404, 'Davet linki geçersiz ya da daha önce kullanılmış');
@@ -198,7 +199,7 @@ R('POST', '/api/me/delete', ({ req, body }) => {
 });
 
 // ---- mekânlar ----
-R('GET', '/api/venues', () => ({ venues: db.prepare('SELECT id,name,district,normal,jest FROM venues').all() }));
+R('GET', '/api/venues', () => ({ venues: MEKAN ? db.prepare('SELECT id,name,district,normal,jest FROM venues').all() : [] }));
 
 // ---- davetler ----
 const LINK_LIMIT = +process.env.JEST_LINK_LIMIT || 5;   // pilotta üye başına, henüz üye olmayan en fazla kaç kişi davet edilebilir
@@ -291,6 +292,7 @@ function readPlace(body) {   // üye olmayan yer: ad (zorunlu), harita bağlant�
 R('POST', '/api/invites', ({ req, body }) => {
   const me = auth(req);
   const custom = !(+body.venueId > 0);
+  if (!custom && !MEKAN) throw err(400, 'Yer adını yaz (Konum bul)');
   const v = custom ? null : db.prepare('SELECT * FROM venues WHERE id=?').get(+body.venueId);
   if (!custom && !v) throw err(400, 'Mekan seç');
   const pl = custom ? readPlace(body) : null;
