@@ -2,12 +2,12 @@
 (function(){
 var api=window.jestApi,VEN=[],MEKAN=false,VENLOADED=false,lastLoad=0,busy=false,view=[];
 window.JESTS=[];
-try{window.jestApi('GET','/api/config').then(function(j){MEKAN=!!j.mekan})}catch(e){}
+var PUSHON=false;try{window.jestApi('GET','/api/config').then(function(j){MEKAN=!!j.mekan;PUSHON=!!j.push;pushInit()})}catch(e){}
 var st=document.createElement('style');
 st.textContent='.rov{position:fixed;inset:0;background:rgba(15,27,61,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center}.rpn{background:#FFF6EC;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:20px 20px 28px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}.rpn h2{margin:0}.rpn input,.rpn select{width:100%;box-sizing:border-box;padding:12px;border-radius:14px;border:2px solid #E8DCCB;font:inherit;background:#fff}.rpn .row{display:flex;gap:8px;flex-wrap:wrap}.rpn .qrb{background:#fff;border-radius:16px;padding:8px;align-self:center;max-width:280px}.rpn .qrb svg{width:100%;height:auto;display:block}.rpn .big{font-size:22px;font-weight:800}.rpn .okb{background:#E7F8EF;border-radius:14px;padding:12px}.rpn .gl{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #EADFCF}';
 document.head.appendChild(st);
 var st2=document.createElement('style');
-st2.textContent='#rToday,.rpn{color:#0F1B3D;color-scheme:light}:is(#rToday,.rpn) :is(h2,h3,b,p,div,span,label){color:#0F1B3D}:is(#rToday,.rpn) .sub{color:#4A5578}:is(#rToday,.rpn) :is(input,select,textarea){background:#fff;color:#0F1B3D;border:1px solid #C9CFE0;color-scheme:light}:is(#rToday,.rpn) .chip{background:#FFE0C2;color:#0F1B3D}:is(#rToday,.rpn) .err{color:#B3261E}#rToday a,.rpn a{color:#C2570A}';
+st2.textContent='#rToday,#rFeed,.rpn{color:#0F1B3D;color-scheme:light}:is(#rToday,#rFeed,.rpn) :is(h2,h3,b,p,div,span,label){color:#0F1B3D}:is(#rToday,#rFeed,.rpn) .sub{color:#4A5578}:is(#rToday,#rFeed,.rpn) :is(input,select,textarea){background:#fff;color:#0F1B3D;border:1px solid #C9CFE0;color-scheme:light}:is(#rToday,#rFeed,.rpn) .chip{background:#FFE0C2;color:#0F1B3D}:is(#rToday,#rFeed,.rpn) .err{color:#B3261E}#rToday a,#rFeed a,.rpn a{color:#C2570A}';
 document.head.appendChild(st2);
 function $$(id){return document.getElementById(id)}
 function fmt(ts){var d=new Date(ts);return d.getDate()+' '+MONTHS[d.getMonth()]+' '+DAYS[d.getDay()]+' · '+pad(d.getHours())+':'+pad(d.getMinutes())}
@@ -66,6 +66,7 @@ function renderToday(){
     row.appendChild(btn('Kendim yazayım',function(){var v=prompt('Bugünkü niyetin?');if(v)tdPost('/api/today/intent',{action:'custom',text:v}).catch(function(e){alert(e.message)})},'chip'))}
   else if(!I.done){row.appendChild(btn('Yaptım',function(){tdPost('/api/today/intent',{action:'done'})},'chip'))}
   else{var ok=el('div','Yaptın, teşekkürler.');ok.style.cssText='font-weight:800';row.appendChild(ok)}
+  if(I.accepted){row.appendChild(btn('Akışta paylaş',function(){api('POST','/api/feed',{text:('Bugünkü niyetim: '+I.text).slice(0,200),dur:'day'}).then(function(){fdAt=0;loadFeed(true)}).catch(function(e){alert(e.message)})},'chip'))}
   sI.appendChild(row);
   // 2) Sıra sende
   var sT=tdSec('Sıra sende','Son buluşmada kim ısmarladıysa sıra karşıdadır','tdSira');
@@ -115,7 +116,7 @@ function draw(){oldRender();
       var av=document.createElement('div');av.className='jav';var ini=pend?'?':(nm.replace(/[^\p{L}\s]/gu,'').trim().split(/\s+/).slice(0,2).map(function(x){return x[0]}).join('')||'?').toLocaleUpperCase('tr');
       av.textContent=ini;av.style.background=pend?'#B8BED6':fcol(nm);ic.className='jbd';av.appendChild(ic);c.insertBefore(av,c.firstChild)}c.style.cursor='pointer';c.setAttribute('role','button');c.tabIndex=0;
     c.onclick=function(){openDetail(j.id)};c.onkeydown=function(e){if(e.key==='Enter')openDetail(j.id)}});
-  loadToday();renderToday();
+  loadToday();renderToday();loadFeed();renderFeed();
   var box=$$('jlist'),old=$$('rGuide');if(old)old.remove();
   var wait=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'}).length;
   if(wait){var w=el('div','');w.id='rGuide';w.className='card';w.style.cssText='background:#FFE9D3;border-radius:16px;padding:12px 14px;margin-bottom:10px;font-weight:800';w.textContent='Yanıtını bekleyen '+wait+' davetin var. Açmak için dokun.';w.style.cursor='pointer';w.setAttribute('role','button');w.tabIndex=0;var wj=JESTS.filter(function(j){return j.active&&j.raw.role==='guest'&&j.status==='Yanıt bekliyor'})[0];w.onclick=function(){if(wj)openDetail(wj.id)};w.onkeydown=function(e){if(e.key==='Enter'&&wj)openDetail(wj.id)};box.parentNode.insertBefore(w,box)}
@@ -228,7 +229,7 @@ function openNew(pre){
     go2.disabled=true;
     var body=Object.assign({kind:kind,at:new Date(dt.value).getTime(),guests:guests.map(function(g){return '0'+g})},pp.body());
     if(kind==='goal'){body.goal=gi.value.trim();body.dir=dir}
-    api('POST','/api/invites',body).then(function(inv){close(O.o);load(true).then(function(){openDetail(inv.id)})})
+    api('POST','/api/invites',body).then(function(inv){close(O.o);load(true).then(function(){openDetail(inv.id);pushAsk()})})
     .catch(function(e){er.textContent=e.message;go2.disabled=false})});
   p.appendChild(go2);p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'));
 }
@@ -386,6 +387,52 @@ function showQR(i){
     var i=document.createElement('input');i.placeholder='SIL';i.autocapitalize='characters';p.appendChild(i);var er=errBox();p.appendChild(er);
     p.appendChild(btn('Hesabımı kalıcı olarak sil',function(){api('POST','/api/me/delete',{confirm:i.value.trim().toUpperCase()}).then(function(){try{localStorage.removeItem('jest-token');localStorage.removeItem('jest-demo-oturum')}catch(e){}location.reload()}).catch(function(e){er.textContent=e.message})}));
     p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'))}})();
+
+
+// Akış: yazılı, süreli (en geç gece yarısı silinir), yalnızca jest arkadaşları
+var FD=null,fdAt=0;
+function fdLeft(m){return m>=60?Math.floor(m/60)+' sa'+(m%60?' '+(m%60)+' dk':''):m+' dk'}
+function loadFeed(force){if(!force&&Date.now()-fdAt<8000)return;fdAt=Date.now();api('GET','/api/feed').then(function(j){FD=j;renderFeed()}).catch(function(){})}
+function fdPost(path,body){return api('POST',path,body||{}).then(function(){fdAt=0;loadFeed(true)})}
+function renderFeed(){
+  var old=$$('rFeed'),kt='',kd='3h';
+  if(old){var ae=document.activeElement;if(ae&&old.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
+    var t0=$$('fdText'),d0=$$('fdDur');if(t0)kt=t0.value;if(d0)kd=d0.value;old.remove()}
+  var box=$$('jlist');if(!box||!FD)return;
+  var c=el('div','');c.id='rFeed';c.className='card';c.style.cssText='background:#EAF0FF;border-radius:16px;padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column';
+  var top=el('div','Akış');top.style.cssText='font-weight:900;font-size:1.1em';c.appendChild(top);
+  var sub=el('div','Jest arkadaşlarının bugünkü yazıları. Her yazı en geç bu gece 24:00’te silinir.');sub.style.cssText='font-size:.85em;opacity:.75';c.appendChild(sub);
+  var w=tdSec('Bir şey yaz','Yalnızca jest arkadaşların görür. Telefon, link ya da hesap adı yazma.','fdCompose');
+  var ta=document.createElement('textarea');ta.id='fdText';ta.maxLength=200;ta.rows=2;ta.placeholder='Bugün aklında ne var? (en fazla 200 harf)';ta.setAttribute('aria-label','Akış yazısı');ta.style.cssText='width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd;font:inherit;resize:vertical';ta.value=kt;w.appendChild(ta);
+  var r=tdRow(),sel=document.createElement('select');sel.id='fdDur';sel.setAttribute('aria-label','Ne kadar kalsın');sel.style.cssText='padding:10px;border-radius:10px;font:inherit';
+  [['10m','10 dakika kalsın'],['3h','3 saat kalsın'],['10h','10 saat kalsın'],['day','Günün sonuna kadar']].forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];sel.appendChild(op)});sel.value=kd;r.appendChild(sel);
+  var er=el('div','');er.className='err';er.style.cssText='font-size:.85em;min-height:0';
+  r.appendChild(btn('Paylaş',function(){er.textContent='';var v=ta.value.trim();if(v.length<2){er.textContent='Bir şeyler yaz.';return}
+    api('POST','/api/feed',{text:v,dur:sel.value}).then(function(){ta.value='';fdAt=0;loadFeed(true)}).catch(function(e){er.textContent=e.message})},'chip'));
+  w.appendChild(r);w.appendChild(er);c.appendChild(w);
+  if(!FD.posts.length){var em=tdSec('Henüz yazı yok','İlk yazan sen ol. Arkadaşların yazınca burada görünür.');c.appendChild(em)}
+  FD.posts.forEach(function(p){
+    var s=tdSec(p.name+(p.mine?' (sen)':''),'Kalan süre: '+fdLeft(p.left));var tx=el('div',p.text);tx.style.cssText='font-weight:600;white-space:pre-wrap;word-break:break-word';s.appendChild(tx);
+    var row=tdRow();
+    if(p.mine)row.appendChild(btn('Sil',function(){fdPost('/api/feed/'+p.id+'/delete')},'chip'));
+    else{if(p.ph)row.appendChild(btn('Jest öner',function(){newWith({guest:p.ph})},'chip'));
+      row.appendChild(btn('Gizle',function(){fdPost('/api/feed/'+p.id+'/hide')},'chip'));
+      row.appendChild(btn('Şikâyet',function(){if(confirm('Bu yazıyı şikâyet etmek istiyor musun? Sana artık görünmez.'))fdPost('/api/feed/'+p.id+'/report',{reason:'şikâyet'})},'chip'));
+      row.appendChild(btn('Engelle',function(){if(confirm(p.name+' kişisinin yazıları artık sana görünmesin mi?'))fdPost('/api/feed/'+p.id+'/block')},'chip'))}
+    s.appendChild(row);c.appendChild(s)});
+  var rt=$$('rToday');box.parentNode.insertBefore(c,rt||box)}
+setInterval(function(){if(!document.hidden&&window.JEST_ME&&$$('jlist'))loadFeed(true)},60000);
+// bildirim: izin yalnızca kullanıcı ilk davetini gönderince ya da "Bildirimleri aç" düğmesine basınca istenir
+function pushOk(){return PUSHON&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window}
+function b64ToU8(b){b=b.replace(/-/g,'+').replace(/_/g,'/');var r=atob(b+'==='.slice((b.length+3)%4)),o=new Uint8Array(r.length);for(var i=0;i<r.length;i++)o[i]=r.charCodeAt(i);return o}
+function pushSub(){return navigator.serviceWorker.ready.then(function(reg){return reg.pushManager.getSubscription().then(function(sb){if(sb)return sb;
+  return api('GET','/api/push/key').then(function(k){return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(k.key)})})})}).then(function(sb){return api('POST','/api/push/subscribe',{endpoint:sb.endpoint})})}
+function pushInit(){try{if(!pushOk())return;if(Notification.permission==='granted')pushSub().catch(function(){});else if(Notification.permission==='default')pushChip()}catch(e){}}
+function pushChip(){var lo=$$('logout');if(!lo||$$('rPush'))return;var b=document.createElement('button');b.id='rPush';b.className='chip';b.type='button';b.textContent='Bildirimleri aç';b.style.marginLeft='8px';lo.parentNode.appendChild(b);b.onclick=function(){pushAsk(true)}}
+function pushAsk(force){try{if(!pushOk()||Notification.permission==='denied')return;if(Notification.permission==='granted'){pushSub().catch(function(){});return}
+  if(!force&&localStorage.getItem('jest-pushask'))return;try{localStorage.setItem('jest-pushask','1')}catch(e){}
+  Notification.requestPermission().then(function(p){if(p==='granted'){pushSub().catch(function(){});var c=$$('rPush');if(c)c.remove()}})}catch(e){}}
+setTimeout(function(){pushInit()},3500);
 // uygulamayı ana ekrana ekle
 (function(){var dp=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dp=e;show()});
   var lo=$$('logout');function standalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone}
