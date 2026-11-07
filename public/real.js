@@ -2,7 +2,7 @@
 (function(){
 var api=window.jestApi,VEN=[],MEKAN=false,VENLOADED=false,lastLoad=0,busy=false,view=[];
 window.JESTS=[];
-var PUSHON=false;try{window.jestApi('GET','/api/config').then(function(j){MEKAN=!!j.mekan;PUSHON=!!j.push;pushInit()})}catch(e){}
+var PUSHON=false,ANLIK=false;try{window.jestApi('GET','/api/config').then(function(j){MEKAN=!!j.mekan;PUSHON=!!j.push;ANLIK=!!j.anlik;pushInit();if(FD)renderFeed()})}catch(e){}
 var st=document.createElement('style');
 st.textContent='.rov{position:fixed;inset:0;background:rgba(15,27,61,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center}.rpn{background:#FFF6EC;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:20px 20px 28px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}.rpn h2{margin:0}.rpn input,.rpn select{width:100%;box-sizing:border-box;padding:12px;border-radius:14px;border:2px solid #E8DCCB;font:inherit;background:#fff}.rpn .row{display:flex;gap:8px;flex-wrap:wrap}.rpn .qrb{background:#fff;border-radius:16px;padding:8px;align-self:center;max-width:280px}.rpn .qrb svg{width:100%;height:auto;display:block}.rpn .big{font-size:22px;font-weight:800}.rpn .okb{background:#E7F8EF;border-radius:14px;padding:12px}.rpn .gl{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #EADFCF}';
 document.head.appendChild(st);
@@ -409,10 +409,12 @@ function renderFeed(){
   var er=el('div','');er.className='err';er.style.cssText='font-size:.85em;min-height:0';
   r.appendChild(btn('Paylaş',function(){er.textContent='';var v=ta.value.trim();if(v.length<2){er.textContent='Bir şeyler yaz.';return}
     api('POST','/api/feed',{text:v,dur:sel.value}).then(function(){ta.value='';fdAt=0;loadFeed(true)}).catch(function(e){er.textContent=e.message})},'chip'));
+  if(ANLIK)r.appendChild(btn('Anlık kare (5 dk)',snapOpen,'chip'));
   w.appendChild(r);w.appendChild(er);c.appendChild(w);
   if(!FD.posts.length){var em=tdSec('Henüz yazı yok','İlk yazan sen ol. Arkadaşların yazınca burada görünür.');c.appendChild(em)}
   FD.posts.forEach(function(p){
-    var s=tdSec(p.name+(p.mine?' (sen)':''),'Kalan süre: '+fdLeft(p.left));var tx=el('div',p.text);tx.style.cssText='font-weight:600;white-space:pre-wrap;word-break:break-word';s.appendChild(tx);
+    var s=tdSec(p.name+(p.mine?' (sen)':''),'Kalan süre: '+fdLeft(p.left));if(p.img){var im=document.createElement('img');im.src=p.img;im.alt='Anlık kare';im.style.cssText='width:100%;max-height:340px;object-fit:cover;border-radius:12px';s.appendChild(im);s.firstChild.textContent+=' · Anlık kare'}
+    if(p.text){var tx=el('div',p.text);tx.style.cssText='font-weight:600;white-space:pre-wrap;word-break:break-word';s.appendChild(tx)}
     var row=tdRow();
     if(p.mine)row.appendChild(btn('Sil',function(){fdPost('/api/feed/'+p.id+'/delete')},'chip'));
     else{if(p.ph)row.appendChild(btn('Jest öner',function(){newWith({guest:p.ph})},'chip'));
@@ -430,6 +432,19 @@ function renderFeed(){
       api('POST','/api/feed/'+p.id+'/comment',{text:v}).then(function(){fdAt=0;loadFeed(true)}).catch(function(e){ye.textContent=e.message})},'chip'));
     s.appendChild(yr);s.appendChild(ye);c.appendChild(s)});
   var rt=$$('rToday');box.parentNode.insertBefore(c,rt||box)}
+
+function snapOpen(){var O=overlay(),p=O.p;p.appendChild(el('h2','Anlık kare'));
+  p.appendChild(el('p','O an kameradan çek. Yalnızca jest arkadaşların görür, 5 dakika sonra silinir (ekran görüntüsünü engelleyemeyiz).'));
+  var fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.setAttribute('capture','environment');fi.style.display='none';p.appendChild(fi);
+  var pv=document.createElement('img');pv.style.cssText='width:100%;max-height:300px;object-fit:cover;border-radius:12px;display:none';p.appendChild(pv);
+  var cap=tdInp('İstersen kısa bir not (en fazla 60 harf)','Anlık kare notu','text',60);p.appendChild(cap);
+  var lb=document.createElement('label');lb.style.cssText='display:flex;gap:8px;align-items:flex-start;font-size:14px';var cb=document.createElement('input');cb.type='checkbox';cb.id='snapOk';lb.appendChild(cb);lb.appendChild(document.createTextNode('Fotoğrafta başka biri varsa onun iznini aldım. Konum bilgisi fotoğraftan silinir.'));p.appendChild(lb);
+  var er=el('div','');er.className='err';p.appendChild(er);var img=null;
+  p.appendChild(btn('Fotoğraf çek',function(){fi.click()},'chip'));
+  fi.onchange=function(){var f=fi.files&&fi.files[0];if(!f)return;er.textContent='';shrinkPhoto(f,function(d){img=d;pv.src=d;pv.style.display='block'},function(){er.textContent='Fotoğraf okunamadı, tekrar dene.'})};
+  p.appendChild(btn('Paylaş',function(){er.textContent='';if(!img){er.textContent='Önce fotoğraf çek.';return}if(!cb.checked){er.textContent='Rıza kutusunu işaretle.';return}
+    api('POST','/api/feed',{kind:'snap',image:img,text:cap.value,consent:true}).then(function(){close(O.o);fdAt=0;loadFeed(true)}).catch(function(e){er.textContent=e.message})},'chip'));
+  p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'))}
 setInterval(function(){if(!document.hidden&&window.JEST_ME&&$$('jlist'))loadFeed(true)},60000);
 // bildirim: izin yalnızca kullanıcı ilk davetini gönderince ya da "Bildirimleri aç" düğmesine basınca istenir
 function pushOk(){return PUSHON&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window}
