@@ -402,7 +402,7 @@ function renderFeed(){
   var c=el('div','');c.id='rFeed';c.className='card';c.style.cssText='background:#EAF0FF;border-radius:16px;padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column';
   var top=el('div','Akış');top.style.cssText='font-weight:900;font-size:1.1em';c.appendChild(top);
   var sub=el('div','Jest arkadaşlarının bugünkü yazıları. Her yazı en geç bu gece 24:00’te silinir.');sub.style.cssText='font-size:.85em;opacity:.75';c.appendChild(sub);
-  var w=tdSec('Bir şey yaz','Yalnızca jest arkadaşların görür. Telefon, link ya da hesap adı yazma.','fdCompose');
+  var w=tdSec('Bir şey yaz','Yalnızca jest arkadaşların görür. Telefon, link ya da hesap adı yazma. En az 10 dakika arayla yazabilirsin; sık yazarsan eski yazıların daha erken silinir.','fdCompose');
   var ta=document.createElement('textarea');ta.id='fdText';ta.maxLength=200;ta.rows=2;ta.placeholder='Bugün aklında ne var? (en fazla 200 harf)';ta.setAttribute('aria-label','Akış yazısı');ta.style.cssText='width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #ddd;font:inherit;resize:vertical';ta.value=kt;w.appendChild(ta);
   var r=tdRow(),sel=document.createElement('select');sel.id='fdDur';sel.setAttribute('aria-label','Ne kadar kalsın');sel.style.cssText='padding:10px;border-radius:10px;font:inherit';
   [['10m','10 dakika kalsın'],['3h','3 saat kalsın'],['10h','10 saat kalsın'],['day','Günün sonuna kadar']].forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];sel.appendChild(op)});sel.value=kd;r.appendChild(sel);
@@ -434,16 +434,16 @@ function renderFeed(){
   var rt=$$('rToday');box.parentNode.insertBefore(c,rt||box)}
 
 function snapOpen(){var O=overlay(),p=O.p;p.appendChild(el('h2','Anlık kare'));
-  p.appendChild(el('p','O an kameradan çek. Yalnızca jest arkadaşların görür, 5 dakika sonra silinir (ekran görüntüsünü engelleyemeyiz).'));
+  p.appendChild(el('p','O an kameradan çek. Yalnızca jest arkadaşların görür, 5 dakika sonra silinir (ekran görüntüsünü engelleyemeyiz). Konum bilgisi fotoğraftan silinir. En az 30 dakika arayla, günde en fazla 6 kare.'));
   var fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.setAttribute('capture','environment');fi.style.display='none';p.appendChild(fi);
   var pv=document.createElement('img');pv.style.cssText='width:100%;max-height:300px;object-fit:cover;border-radius:12px;display:none';p.appendChild(pv);
   var cap=tdInp('İstersen kısa bir not (en fazla 60 harf)','Anlık kare notu','text',60);p.appendChild(cap);
-  var lb=document.createElement('label');lb.style.cssText='display:flex;gap:8px;align-items:flex-start;font-size:14px';var cb=document.createElement('input');cb.type='checkbox';cb.id='snapOk';lb.appendChild(cb);lb.appendChild(document.createTextNode('Fotoğrafta başka biri varsa onun iznini aldım. Konum bilgisi fotoğraftan silinir.'));p.appendChild(lb);
+  var lb=document.createElement('label');lb.style.cssText='display:flex;gap:8px;align-items:flex-start;font-size:14px';var cb=document.createElement('input');cb.type='checkbox';cb.id='snapOk';lb.appendChild(cb);lb.appendChild(document.createTextNode('Fotoğrafı şu an kendim çektim. Fotoğrafta başka biri varsa onun iznini aldım, 18 yaşından küçük kimse yok. Müstehcen, şiddet içeren ya da yasa dışı içerik yok. Jest arkadaşlarımın 5 dakika görmesine açık rıza veriyorum.'));p.appendChild(lb);
   var er=el('div','');er.className='err';p.appendChild(er);var img=null;
   p.appendChild(btn('Fotoğraf çek',function(){fi.click()},'chip'));
   fi.onchange=function(){var f=fi.files&&fi.files[0];if(!f)return;er.textContent='';shrinkPhoto(f,function(d){img=d;pv.src=d;pv.style.display='block'},function(){er.textContent='Fotoğraf okunamadı, tekrar dene.'})};
   p.appendChild(btn('Paylaş',function(){er.textContent='';if(!img){er.textContent='Önce fotoğraf çek.';return}if(!cb.checked){er.textContent='Rıza kutusunu işaretle.';return}
-    api('POST','/api/feed',{kind:'snap',image:img,text:cap.value,consent:true}).then(function(){close(O.o);fdAt=0;loadFeed(true)}).catch(function(e){er.textContent=e.message})},'chip'));
+    api('POST','/api/feed',{kind:'snap',image:img,text:cap.value,consent:true,consentV:'v1'}).then(function(){close(O.o);fdAt=0;loadFeed(true)}).catch(function(e){er.textContent=e.message})},'chip'));
   p.appendChild(btn('Vazgeç',function(){close(O.o)},'chip'))}
 setInterval(function(){if(!document.hidden&&window.JEST_ME&&$$('jlist'))loadFeed(true)},60000);
 // bildirim: izin yalnızca kullanıcı ilk davetini gönderince ya da "Bildirimleri aç" düğmesine basınca istenir
