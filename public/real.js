@@ -49,7 +49,10 @@ function newWith(pre){if(!VEN.length){api('GET','/api/venues').then(function(j){
 window.jestOpenNew=newWith;
 function wa(msg){if(navigator.share){navigator.share({text:msg}).catch(function(){})}else{window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}}
 function renderToday(){
-  var old=$$('rToday');if(old)old.remove();var box=$$('jlist');if(!box||!TD)return;
+  var old=$$('rToday'),keep={};
+  if(old){var ae=document.activeElement;if(ae&&old.contains(ae)&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
+    old.querySelectorAll('input,select').forEach(function(e){var k=e.getAttribute('aria-label');if(k&&e.value)keep[k]=e.value});old.remove()}
+  var box=$$('jlist');if(!box||!TD)return;
   var c=el('div','');c.id='rToday';c.className='card';c.style.cssText='background:#FFF0DB;border-radius:16px;padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column';
   var top=el('div','Bugün');top.style.cssText='font-weight:900;font-size:1.1em';c.appendChild(top);
   var sub=el('div',(TD.streak?TD.streak+' günlük niyet serin var. ':'')+'Küçük bir jest, güzel bir gün.');sub.style.cssText='font-size:.85em;opacity:.75';c.appendChild(sub);
@@ -97,6 +100,7 @@ function renderToday(){
   sS.appendChild(el('div','Tamamlanan buluşma: '+W.met+' · Gönderilen davet: '+W.sent+' · Teşekkür: '+W.thanks+' · Niyet: '+W.intentDone+'/7'));
   var h=TD.hour,order=h<12?[sI,sT,sG,sO,sK,sS]:(h<17?[sT,sI,sG,sO,sK,sS]:[sK,sT,sI,sO,sG,sS]);
   order.forEach(function(x){c.appendChild(x)});
+  c.querySelectorAll('input,select').forEach(function(e){var k=e.getAttribute('aria-label');if(k&&keep[k]!=null)e.value=keep[k]});
   box.parentNode.insertBefore(c,box)}
 var oldRender=window.renderHome;
 function draw(){oldRender();
