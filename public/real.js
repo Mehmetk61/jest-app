@@ -419,7 +419,16 @@ function renderFeed(){
       row.appendChild(btn('Gizle',function(){fdPost('/api/feed/'+p.id+'/hide')},'chip'));
       row.appendChild(btn('Şikâyet',function(){if(confirm('Bu yazıyı şikâyet etmek istiyor musun? Sana artık görünmez.'))fdPost('/api/feed/'+p.id+'/report',{reason:'şikâyet'})},'chip'));
       row.appendChild(btn('Engelle',function(){if(confirm(p.name+' kişisinin yazıları artık sana görünmesin mi?'))fdPost('/api/feed/'+p.id+'/block')},'chip'))}
-    s.appendChild(row);c.appendChild(s)});
+    s.appendChild(row);
+    (p.comments||[]).forEach(function(m){var cr=tdRow();cr.style.cssText+=';padding-left:8px;border-left:3px solid #D5DDF5';
+      var ct=el('div','');ct.style.cssText='flex:1 1 60%;word-break:break-word';var nb=el('b',m.name+(m.mine?' (sen)':'')+': ');ct.appendChild(nb);ct.appendChild(document.createTextNode(m.text));cr.appendChild(ct);
+      if(m.canDelete)cr.appendChild(btn('Sil',function(){fdPost('/api/feed/comments/'+m.id+'/delete')},'chip'));
+      else cr.appendChild(btn('Şikâyet',function(){if(confirm('Bu yorumu şikâyet etmek istiyor musun? Sana artık görünmez.'))fdPost('/api/feed/comments/'+m.id+'/report')},'chip'));
+      s.appendChild(cr)});
+    var yr=tdRow(),yi=tdInp('Yorum yaz (en fazla 100 harf)','Yorum '+p.id,'text',100);yi.style.flex='1 1 55%';yr.appendChild(yi);var ye=el('div','');ye.className='err';ye.style.cssText='font-size:.85em;width:100%';
+    yr.appendChild(btn('Yorum yap',function(){ye.textContent='';var v=yi.value.trim();if(v.length<2){ye.textContent='Bir şeyler yaz.';return}
+      api('POST','/api/feed/'+p.id+'/comment',{text:v}).then(function(){fdAt=0;loadFeed(true)}).catch(function(e){ye.textContent=e.message})},'chip'));
+    s.appendChild(yr);s.appendChild(ye);c.appendChild(s)});
   var rt=$$('rToday');box.parentNode.insertBefore(c,rt||box)}
 setInterval(function(){if(!document.hidden&&window.JEST_ME&&$$('jlist'))loadFeed(true)},60000);
 // bildirim: izin yalnızca kullanıcı ilk davetini gönderince ya da "Bildirimleri aç" düğmesine basınca istenir
