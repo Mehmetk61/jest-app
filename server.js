@@ -169,7 +169,7 @@ R('POST', '/api/verify', async ({ body }) => {
   db.prepare('INSERT INTO sessions(token,user_id,created) VALUES(?,?,?)').run(token, u.id, now());
   return { token, user: pubUser(u) };
 });
-R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT, mekan: MEKAN, push: PUSH }));
+R('GET', '/api/config', () => ({ dev: DEV, closed: CLOSED, ageSelf: YAS_BEYAN, pilot: PILOT, mekan: MEKAN, push: PUSH, anlik: ANLIK }));
 R('GET', '/api/link/:token', ({ p }) => {   // davet linkine tıklayan, kayıt olmadan önce davetin özetini görür
   const r = db.prepare('SELECT * FROM invite_pending WHERE token=? AND used=0').get(p.token);
   if (!r) throw err(404, 'Davet linki geçersiz ya da daha önce kullanılmış');
@@ -383,6 +383,8 @@ db.exec('CREATE TABLE IF NOT EXISTS feed_hides(user_id INTEGER, feed_id INTEGER,
 db.exec('CREATE TABLE IF NOT EXISTS feed_comments(id INTEGER PRIMARY KEY, feed_id INTEGER, user_id INTEGER, text TEXT, created INTEGER)');
 db.exec('CREATE TABLE IF NOT EXISTS feed_comment_reports(comment_id INTEGER, user_id INTEGER, PRIMARY KEY(comment_id,user_id))');
 db.exec('CREATE TABLE IF NOT EXISTS feed_blocks(user_id INTEGER, blocked_id INTEGER, PRIMARY KEY(user_id,blocked_id))');
+const ANLIK = process.env.JEST_ANLIK === '1';   // Anlık kare (5 dakikalık fotoğraf): kodda hazır, varsayılan kapalı
+try { db.exec('ALTER TABLE feed ADD COLUMN img TEXT'); } catch (e) {}
 const FEED_DAY_MAX = +process.env.JEST_AKIS_GUNLUK || 3;
 const FEED_DURS = { '10m': 600000, '3h': 3 * 3600000, '10h': 10 * 3600000, day: 24 * 3600000 };
 const endOfDay = (t = now()) => (Math.floor((t + 3 * 3600000) / 86400000) + 1) * 86400000 - 3 * 3600000;
@@ -402,12 +404,27 @@ const feedBad = t => {
 };
 R('POST', '/api/feed', ({ req, body }) => {
   const me = auth(req); feedPurge();
+  if (body.kind === 'snap') {   // Anlık kare: yalnızca kameradan, 5 dakika, rıza kutusu şart
+    if (!ANLIK) throw err(403, 'Anlık kare henüz açık değil');
+    if (body.consent !== true) throw err(400, 'Fotoğrafta başkası varsa onun iznini aldığını onaylaman gerekir');
+    const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(body.image || ''));
+    if (!m) throw err(400, 'Fotoğraf okunamadı');
+    const buf = Buffer.from(m[1], 'base64');
+    if (buf.length < 500 || buf.length > 300000 || buf[0] !== 0xFF || buf[1] !== 0xD8) throw err(400, 'Fotoğraf geçerli değil ya da çok büyük');
+    const cap = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (cap) { const bd = feedBad(cap); if (bd) throw err(400, bd); }
+    const t0 = now(), ds = endOfDay(t0) - 86400000;
+    if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=? AND img IS NOT NULL').get(me.id, ds).c >= FEED_DAY_MAX) throw err(429, 'Günde en fazla ' + FEED_DAY_MAX + ' anlık kare paylaşabilirsin');
+    const e0 = Math.min(t0 + 5 * 60000, endOfDay(t0));
+    const r0 = db.prepare('INSERT INTO feed(user_id,text,created,exp,img) VALUES(?,?,?,?,?)').run(me.id, cap, t0, e0, m[0]);
+    return { id: Number(r0.lastInsertRowid), exp: e0 };
+  }
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
   if (text.length < 2) throw err(400, 'Bir şeyler yaz (en az 2 harf)');
   const bad = feedBad(text); if (bad) throw err(400, bad);
   const d = FEED_DURS[body.dur]; if (!d) throw err(400, 'Süre seç');
   const t = now(), dayStart = endOfDay(t) - 86400000;
-  if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=?').get(me.id, dayStart).c >= FEED_DAY_MAX) throw err(429, 'Günde en fazla ' + FEED_DAY_MAX + ' yazı paylaşabilirsin');
+  if (db.prepare('SELECT COUNT(*) c FROM feed WHERE user_id=? AND created>=? AND img IS NULL').get(me.id, dayStart).c >= FEED_DAY_MAX) throw err(429, 'Günde en fazla ' + FEED_DAY_MAX + ' yazı paylaşabilirsin');
   const exp = Math.min(t + d, endOfDay(t));   // ertesi güne geçmez
   const r = db.prepare('INSERT INTO feed(user_id,text,created,exp) VALUES(?,?,?,?)').run(me.id, text, t, exp);
   return { id: Number(r.lastInsertRowid), exp };
@@ -421,7 +438,7 @@ R('GET', '/api/feed', ({ req }) => {
     .filter(f => ids.includes(f.user_id) && !blocked.has(f.user_id) && !hid.has(f.id)).slice(0, 40);
   const myRep = new Set(db.prepare('SELECT comment_id id FROM feed_comment_reports WHERE user_id=?').all(me.id).map(x => x.id));
   const cm = id => db.prepare('SELECT c.*,u.name FROM feed_comments c JOIN users u ON u.id=c.user_id WHERE c.feed_id=? ORDER BY c.id').all(id).filter(c => !myRep.has(c.id) && !blocked.has(c.user_id));
-  return { max: FEED_DAY_MAX, posts: rows.map(f => ({ id: f.id, name: f.name, mine: f.user_id === me.id, text: f.text, at: f.created, left: Math.max(1, Math.round((f.exp - now()) / 60000)), ph: f.user_id === me.id ? null : f.phone.replace(/^\+90/, ''),
+  return { max: FEED_DAY_MAX, posts: rows.map(f => ({ id: f.id, name: f.name, mine: f.user_id === me.id, text: f.text, img: f.img || null, at: f.created, left: Math.max(1, Math.round((f.exp - now()) / 60000)), ph: f.user_id === me.id ? null : f.phone.replace(/^\+90/, ''),
     comments: cm(f.id).map(c => ({ id: c.id, name: c.name, text: c.text, mine: c.user_id === me.id, canDelete: c.user_id === me.id || f.user_id === me.id })) })) };
 });
 R('POST', '/api/feed/:id/delete', ({ req, p }) => { const me = auth(req); db.prepare('DELETE FROM feed WHERE id=? AND user_id=?').run(+p.id, me.id); return { ok: true }; });
